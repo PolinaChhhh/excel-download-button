@@ -41,7 +41,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
         />
       )}
       
-      <div className="bg-white shadow-sm rounded-lg overflow-auto print:shadow-none print:rounded-none">
+      <div className="bg-white shadow-sm rounded-lg overflow-auto print:shadow-none print:rounded-none print:overflow-visible">
         <InvoiceTable 
           data={invoiceData} 
           onDataChange={onDataChange} 

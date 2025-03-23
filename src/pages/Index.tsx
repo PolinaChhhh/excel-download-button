@@ -40,14 +40,19 @@ const Index = () => {
   const handlePrint = () => {
     setIsEditable(false); // Switch to view mode for printing
     setTimeout(() => {
+      // Add a class to the body for print-specific styling
+      document.body.classList.add('print-mode');
       window.print();
-      // After printing, switch back to edit mode
-      setTimeout(() => setIsEditable(true), 500);
+      // After printing, remove the class and switch back to edit mode
+      setTimeout(() => {
+        document.body.classList.remove('print-mode');
+        setIsEditable(true);
+      }, 500);
     }, 300);
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 print:bg-white">
+    <div className="min-h-screen bg-gray-50 print:bg-white print:min-h-0">
       {/* Header with buttons - hidden when printing */}
       <div className={`container mx-auto py-6 px-4 sm:px-6 ${isMobile ? 'space-y-4' : 'space-y-6'} print:hidden`}>
         <Header 
