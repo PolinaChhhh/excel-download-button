@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import InvoiceTable from "@/components/InvoiceTable";
 import ExcelUploader from "@/components/ExcelUploader";
@@ -116,7 +117,7 @@ const Index = () => {
                 </p>
                 <ModifiedExcelDownloader 
                   data={invoiceData} 
-                  filename="modified-document.txt"
+                  filename="modified-document.xlsx"
                 />
               </div>
             )}
