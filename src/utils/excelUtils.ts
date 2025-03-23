@@ -1,9 +1,12 @@
+
 import * as XLSX from 'xlsx';
+import type { CellStyle, ValidationSummary, CellValidationResult } from '@/types/excel';
 
 export const analyzeExcelFile = async (file: File): Promise<{ 
-  cellStyles: any[], 
+  cellStyles: CellStyle[], 
   workbook: any, 
-  worksheet: any 
+  worksheet: any,
+  cellContents: Record<string, any>
 }> => {
   return new Promise((resolve, reject) => {
     const fileReader = new FileReader();
@@ -35,8 +38,9 @@ export const analyzeExcelFile = async (file: File): Promise<{
         const wsName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[wsName];
         
-        // Analyze cell styles
-        const styleCells: any[] = [];
+        // Analyze cell styles and contents
+        const styleCells: CellStyle[] = [];
+        const cellContents: Record<string, any> = {};
         const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1:Z100');
         
         for (let r = range.s.r; r <= range.e.r; r++) {
@@ -44,26 +48,144 @@ export const analyzeExcelFile = async (file: File): Promise<{
             const cellAddress = XLSX.utils.encode_cell({r: r, c: c});
             const cell = worksheet[cellAddress];
             
-            if (cell && cell.s) {
-              const borders = {
-                top: cell.s.border?.top?.style !== undefined,
-                right: cell.s.border?.right?.style !== undefined,
-                bottom: cell.s.border?.bottom?.style !== undefined,
-                left: cell.s.border?.left?.style !== undefined
+            if (cell) {
+              // Store cell content
+              cellContents[cellAddress] = {
+                value: cell.v,
+                type: cell.t,
+                formula: cell.f,
+                formattedValue: cell.w
               };
               
-              styleCells.push({
-                address: cellAddress,
-                style: cell.s,
-                borders: borders,
-                font: cell.s.font,
-                fill: cell.s.fill
-              });
+              if (cell.s) {
+                const borders = {
+                  top: cell.s.border?.top?.style !== undefined,
+                  right: cell.s.border?.right?.style !== undefined,
+                  bottom: cell.s.border?.bottom?.style !== undefined,
+                  left: cell.s.border?.left?.style !== undefined
+                };
+                
+                styleCells.push({
+                  address: cellAddress,
+                  style: cell.s,
+                  borders: borders,
+                  font: cell.s.font,
+                  fill: cell.s.fill,
+                  value: cell.v
+                });
+              }
             }
           }
         }
         
-        resolve({ cellStyles: styleCells, workbook, worksheet });
+        resolve({ cellStyles: styleCells, workbook, worksheet, cellContents });
+      } catch (error) {
+        reject(error);
+      }
+    };
+    
+    fileReader.onerror = (error) => {
+      reject(error);
+    };
+    
+    fileReader.readAsArrayBuffer(file);
+  });
+};
+
+export const validateCellStyles = async (file: File, originalStyles: CellStyle[]): Promise<ValidationSummary> => {
+  return new Promise((resolve, reject) => {
+    const fileReader = new FileReader();
+    
+    fileReader.onload = async (e) => {
+      try {
+        const { cellStyles: currentStyles } = await analyzeExcelFile(file);
+        
+        // Create a map of original styles by address for quick lookup
+        const originalStyleMap: Record<string, CellStyle> = {};
+        originalStyles.forEach(style => {
+          originalStyleMap[style.address] = style;
+        });
+        
+        // Validate each cell
+        const results: CellValidationResult[] = [];
+        let validCount = 0;
+        
+        currentStyles.forEach(currentCell => {
+          const originalCell = originalStyleMap[currentCell.address];
+          const result: CellValidationResult = {
+            address: currentCell.address,
+            isValid: true,
+            issues: []
+          };
+          
+          // Skip validation for AD18 cell which we modify manually
+          if (currentCell.address === 'AD18') {
+            result.isValid = true;
+            validCount++;
+            results.push(result);
+            return;
+          }
+          
+          if (!originalCell) {
+            result.isValid = false;
+            result.issues = ['Cell not found in original document'];
+          } else {
+            // Check borders
+            if (currentCell.borders?.top !== originalCell.borders?.top) {
+              result.isValid = false;
+              result.issues = result.issues || [];
+              result.issues.push('Top border mismatch');
+            }
+            
+            if (currentCell.borders?.right !== originalCell.borders?.right) {
+              result.isValid = false;
+              result.issues = result.issues || [];
+              result.issues.push('Right border mismatch');
+            }
+            
+            if (currentCell.borders?.bottom !== originalCell.borders?.bottom) {
+              result.isValid = false;
+              result.issues = result.issues || [];
+              result.issues.push('Bottom border mismatch');
+            }
+            
+            if (currentCell.borders?.left !== originalCell.borders?.left) {
+              result.isValid = false;
+              result.issues = result.issues || [];
+              result.issues.push('Left border mismatch');
+            }
+            
+            // Check font
+            if (JSON.stringify(currentCell.font) !== JSON.stringify(originalCell.font)) {
+              result.isValid = false;
+              result.issues = result.issues || [];
+              result.issues.push('Font style mismatch');
+            }
+            
+            // Check fill
+            if (JSON.stringify(currentCell.fill) !== JSON.stringify(originalCell.fill)) {
+              result.isValid = false;
+              result.issues = result.issues || [];
+              result.issues.push('Fill style mismatch');
+            }
+          }
+          
+          if (result.isValid) {
+            validCount++;
+          }
+          
+          results.push(result);
+        });
+        
+        const summary: ValidationSummary = {
+          isValid: validCount === currentStyles.length,
+          totalCells: currentStyles.length,
+          validCells: validCount,
+          invalidCells: currentStyles.length - validCount,
+          cellResults: results
+        };
+        
+        resolve(summary);
       } catch (error) {
         reject(error);
       }
@@ -79,7 +201,7 @@ export const analyzeExcelFile = async (file: File): Promise<{
 
 export const modifyAndDownloadExcel = async (
   file: File,
-  cellStyles: any[],
+  cellStyles: CellStyle[],
   filename: string,
   customCellText: string
 ): Promise<void> => {

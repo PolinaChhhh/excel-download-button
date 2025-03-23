@@ -1,11 +1,12 @@
 
 import React, { useState } from 'react';
 import { toast } from 'sonner';
-import { analyzeExcelFile, modifyAndDownloadExcel } from '@/utils/excelUtils';
+import { analyzeExcelFile, modifyAndDownloadExcel, validateCellStyles } from '@/utils/excelUtils';
 import AnalyzeButton from '@/components/excel/AnalyzeButton';
 import DownloadButton from '@/components/excel/DownloadButton';
 import StyleInfo from '@/components/excel/StyleInfo';
-import type { CellStyle, ExcelDownloaderProps } from '@/types/excel';
+import ValidationResults from '@/components/excel/ValidationResults';
+import type { CellStyle, ExcelDownloaderProps, ValidationSummary } from '@/types/excel';
 
 const ModifiedExcelDownloader: React.FC<ExcelDownloaderProps> = ({
   data,
@@ -14,9 +15,12 @@ const ModifiedExcelDownloader: React.FC<ExcelDownloaderProps> = ({
   className,
   customCellText = "ПОПКА"
 }) => {
-  const [downloadState, setDownloadState] = useState<"idle" | "loading" | "analyzing" | "success" | "error">("idle");
+  const [downloadState, setDownloadState] = useState<"idle" | "loading" | "analyzing" | "validating" | "success" | "error">("idle");
   const [cellStyles, setCellStyles] = useState<CellStyle[]>([]);
+  const [cellContents, setCellContents] = useState<Record<string, any>>({});
   const [hasAnalyzed, setHasAnalyzed] = useState(false);
+  const [hasValidated, setHasValidated] = useState(false);
+  const [validationResults, setValidationResults] = useState<ValidationSummary | null>(null);
 
   const analyzeDocument = async () => {
     if (!originalFile) return;
@@ -25,9 +29,10 @@ const ModifiedExcelDownloader: React.FC<ExcelDownloaderProps> = ({
     toast.info("Анализ стилей документа...");
     
     try {
-      const { cellStyles: styles } = await analyzeExcelFile(originalFile);
+      const { cellStyles: styles, cellContents: contents } = await analyzeExcelFile(originalFile);
       
       setCellStyles(styles);
+      setCellContents(contents);
       setHasAnalyzed(true);
       setDownloadState("idle");
       
@@ -53,6 +58,61 @@ const ModifiedExcelDownloader: React.FC<ExcelDownloaderProps> = ({
       console.error("Ошибка при анализе Excel файла:", error);
       setDownloadState("error");
       toast.error("Ошибка при анализе файла");
+      
+      setTimeout(() => {
+        setDownloadState("idle");
+      }, 2000);
+    }
+  };
+
+  const validateDocument = async () => {
+    if (!originalFile) return;
+    
+    setDownloadState("validating");
+    toast.info("Проверка стилей документа...");
+    
+    try {
+      // First, create a temporary file with our modifications
+      const tempFileReader = new FileReader();
+      tempFileReader.onload = async (e) => {
+        try {
+          // Validate the modified document
+          const results = await validateCellStyles(originalFile, cellStyles);
+          setValidationResults(results);
+          setHasValidated(true);
+          setDownloadState("idle");
+          
+          if (results.isValid) {
+            toast.success("Проверка документа завершена успешно. Все стили соответствуют ожиданиям.");
+          } else {
+            toast.warning(`Обнаружены различия в ${results.invalidCells} ячейках из ${results.totalCells}.`);
+          }
+        } catch (error) {
+          console.error("Ошибка при валидации Excel файла:", error);
+          setDownloadState("error");
+          toast.error("Ошибка при проверке файла");
+          
+          setTimeout(() => {
+            setDownloadState("idle");
+          }, 2000);
+        }
+      };
+      
+      tempFileReader.onerror = (error) => {
+        console.error("Ошибка при чтении временного файла:", error);
+        setDownloadState("error");
+        toast.error("Ошибка при чтении временного файла");
+        
+        setTimeout(() => {
+          setDownloadState("idle");
+        }, 2000);
+      };
+      
+      tempFileReader.readAsArrayBuffer(originalFile);
+    } catch (error) {
+      console.error("Ошибка при валидации Excel файла:", error);
+      setDownloadState("error");
+      toast.error("Ошибка при проверке файла");
       
       setTimeout(() => {
         setDownloadState("idle");
@@ -103,18 +163,45 @@ const ModifiedExcelDownloader: React.FC<ExcelDownloaderProps> = ({
         />
       )}
       
-      {(hasAnalyzed || !originalFile) && (
+      {hasAnalyzed && !hasValidated && originalFile && (
+        <Button 
+          onClick={validateDocument}
+          disabled={downloadState !== "idle" || !originalFile}
+          className={className}
+          variant="outline"
+        >
+          {downloadState === "validating" ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Проверка стилей документа...
+            </>
+          ) : (
+            <>
+              <CheckSquare className="mr-2 h-4 w-4" />
+              Проверить соответствие стилей
+            </>
+          )}
+        </Button>
+      )}
+      
+      {hasValidated && originalFile && (
         <DownloadButton 
           onClick={handleDownload}
-          downloadState={downloadState === "analyzing" ? "loading" : downloadState}
-          disabled={downloadState === "loading" || !originalFile || (!!originalFile && !hasAnalyzed)}
+          downloadState={downloadState}
+          disabled={downloadState === "loading" || !originalFile}
           className={className}
         />
       )}
       
-      {hasAnalyzed && <StyleInfo stylesCount={cellStyles.length} />}
+      {hasAnalyzed && <StyleInfo stylesCount={cellStyles.length} cellContents={cellContents} />}
+      
+      {hasValidated && <ValidationResults validationResults={validationResults} />}
     </div>
   );
 };
+
+// Import the Button and icons at the top
+import { Button } from '@/components/ui/button';
+import { CheckSquare, Loader2 } from 'lucide-react';
 
 export default ModifiedExcelDownloader;

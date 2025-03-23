@@ -10,6 +10,7 @@ export interface CellStyle {
   };
   font?: any;
   fill?: any;
+  value?: any; // Cell value
 }
 
 export interface ExcelDownloaderProps {
@@ -18,4 +19,18 @@ export interface ExcelDownloaderProps {
   filename?: string;
   className?: string;
   customCellText?: string;
+}
+
+export interface CellValidationResult {
+  address: string;
+  isValid: boolean;
+  issues?: string[];
+}
+
+export interface ValidationSummary {
+  isValid: boolean;
+  totalCells: number;
+  validCells: number;
+  invalidCells: number;
+  cellResults: CellValidationResult[];
 }
