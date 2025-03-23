@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Download, Loader2, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -35,88 +36,102 @@ const ModifiedExcelDownloader: React.FC<ModifiedExcelDownloaderProps> = ({
         try {
           const arrayBuffer = e.target?.result as ArrayBuffer;
           
-          // Parse the Excel file with all possible formatting options enabled
-          const workbook = XLSX.read(arrayBuffer, { 
-            type: 'array',
-            cellStyles: true,   // Important for cell styling
-            cellDates: true,    // Preserve date formats
-            cellNF: true,       // Preserve number formats
-            cellFormula: true,  // Preserve formulas
-            bookVBA: true,      // Preserve VBA
-            WTF: true           // Parse all unknown and non-standard properties
+          // Сначала преобразуем в бинарную строку для лучшей совместимости
+          const data = new Uint8Array(arrayBuffer);
+          const arr = new Array();
+          for (let i = 0; i < data.length; i++) {
+            arr[i] = String.fromCharCode(data[i]);
+          }
+          const bstr = arr.join("");
+          
+          // Parse the Excel file с максимальным сохранением форматирования
+          const workbook = XLSX.read(bstr, { 
+            type: 'binary',
+            cellStyles: true,   // Важно для стилей ячеек
+            cellDates: true,    // Сохранение форматов дат
+            cellNF: true,       // Сохранение числовых форматов
+            cellFormula: true,  // Сохранение формул
+            bookVBA: true,      // Сохранение VBA кода
+            WTF: true           // Парсинг всех неизвестных свойств
           });
           
           // Get the first worksheet
           const wsName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[wsName];
           
-          // Log worksheet details for debugging
-          console.log("Worksheet structure:", Object.keys(worksheet));
-          console.log("Cell AD18 before:", worksheet["AD18"]);
+          // Подробный вывод информации о структуре для отладки
+          console.log("Информация о книге:", workbook);
+          console.log("Стили книги:", workbook.Styles);
+          console.log("Свойства листа:", Object.keys(worksheet));
+          console.log("Ячейка AD18 до изменения:", worksheet["AD18"]);
           
-          // Get the cell AD18 properties before modifying it
+          // Получаем все свойства ячейки
           const cellAddress = "AD18";
           const originalCell = worksheet[cellAddress] || {};
           
-          // Preserve ALL original properties
-          // Ensure we keep every style property
+          // Сохраняем все оригинальные свойства и метаданные
           const cellStyle = originalCell.s || {}; 
           
-          // Create a complete cell object that preserves everything
+          // Создаем полный объект ячейки сохраняя все свойства
           worksheet[cellAddress] = {
-            ...originalCell,       // Keep all original properties
-            v: customCellText,     // Set the raw value
-            w: customCellText,     // Set the formatted text
-            t: 's',                // Type: string
-            s: cellStyle,          // Style: preserve original style including borders, font, etc.
+            ...originalCell,        // Сохраняем все исходные свойства
+            v: customCellText,      // Устанавливаем сырое значение
+            w: customCellText,      // Устанавливаем форматированный текст
+            t: 's',                 // Тип: строка
+            s: cellStyle,           // Стиль: сохраняем исходный стиль включая границы, шрифт и т.д.
           };
           
-          // Log the modified cell for debugging
-          console.log("Cell AD18 after:", worksheet[cellAddress]);
+          // Детальный лог измененной ячейки
+          console.log("Ячейка AD18 после изменения:", worksheet[cellAddress]);
           
-          // Ensure worksheet properties are preserved
-          if (!worksheet['!cols']) {
-            console.warn("Column widths not found in original file");
-          }
-          if (!worksheet['!rows']) {
-            console.warn("Row heights not found in original file");
-          }
-          if (!worksheet['!merges']) {
-            console.warn("Merged cells not found in original file");
-          }
+          // Проверка и логирование наличия важных свойств форматирования листа
+          console.log("Ширина столбцов:", worksheet['!cols']); 
+          console.log("Высота строк:", worksheet['!rows']);
+          console.log("Объединенные ячейки:", worksheet['!merges']);
+          console.log("Диапазон данных:", worksheet['!ref']);
           
-          // Write the modified workbook to an array buffer with full formatting preservation
-          const excelBuffer = XLSX.write(workbook, { 
+          // Запись измененной книги в буфер с полным сохранением форматирования
+          const wbout = XLSX.write(workbook, { 
             bookType: 'xlsx', 
-            type: 'array',
-            cellStyles: true,     // Very important for preserving styles
+            type: 'binary',
+            cellStyles: true,     // Очень важно для сохранения стилей
             compression: true
           });
           
-          // Create a blob from the buffer
-          const blob = new Blob([excelBuffer], { 
+          // Конвертация бинарной строки в массив байтов
+          const s2ab = (s: string) => {
+            const buf = new ArrayBuffer(s.length);
+            const view = new Uint8Array(buf);
+            for (let i = 0; i < s.length; i++) {
+              view[i] = s.charCodeAt(i) & 0xFF;
+            }
+            return buf;
+          };
+          
+          // Создаем blob из буфера
+          const blob = new Blob([s2ab(wbout)], { 
             type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" 
           });
           
-          // Create a download link
+          // Создаем ссылку для скачивания
           const url = URL.createObjectURL(blob);
           const link = document.createElement("a");
           link.href = url;
           link.download = filename;
           link.click();
           
-          // Clean up
+          // Очистка ресурсов
           URL.revokeObjectURL(url);
           
           setDownloadState("success");
           toast.success(`Документ успешно скачан с заполненной ячейкой AD18: "${customCellText}"`);
           
-          // Reset after 2 seconds
+          // Сбросить статус через 2 секунды
           setTimeout(() => {
             setDownloadState("idle");
           }, 2000);
         } catch (error) {
-          console.error("Failed to process Excel file:", error);
+          console.error("Ошибка при обработке Excel файла:", error);
           setDownloadState("error");
           toast.error("Ошибка при обработке файла");
           
@@ -127,7 +142,7 @@ const ModifiedExcelDownloader: React.FC<ModifiedExcelDownloaderProps> = ({
       };
       
       fileReader.onerror = () => {
-        console.error("Failed to read file");
+        console.error("Ошибка чтения файла");
         setDownloadState("error");
         toast.error("Ошибка при чтении файла");
         
@@ -138,11 +153,11 @@ const ModifiedExcelDownloader: React.FC<ModifiedExcelDownloaderProps> = ({
       
       fileReader.readAsArrayBuffer(originalFile);
     } catch (error) {
-      console.error("Download failed:", error);
+      console.error("Ошибка скачивания:", error);
       setDownloadState("error");
       toast.error("Ошибка при скачивании файла");
       
-      // Reset after 2 seconds
+      // Сбросить статус через 2 секунды
       setTimeout(() => {
         setDownloadState("idle");
       }, 2000);
