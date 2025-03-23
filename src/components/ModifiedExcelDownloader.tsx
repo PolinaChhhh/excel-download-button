@@ -7,7 +7,7 @@ import * as XLSX from 'xlsx';
 
 interface ModifiedExcelDownloaderProps {
   data: any;
-  originalFile?: File;
+  originalFile?: File | null;
   filename?: string;
   className?: string;
   customCellText?: string;
@@ -338,7 +338,7 @@ const ModifiedExcelDownloader: React.FC<ModifiedExcelDownloaderProps> = ({
       {(hasAnalyzed || !originalFile) && (
         <Button
           onClick={handleDownload}
-          disabled={downloadState === "loading" || !originalFile || (!hasAnalyzed && originalFile)}
+          disabled={downloadState === "loading" || !originalFile || (!!originalFile && !hasAnalyzed)}
           className={className}
           variant="default"
         >
