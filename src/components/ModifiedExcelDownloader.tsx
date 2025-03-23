@@ -10,6 +10,7 @@ interface ModifiedExcelDownloaderProps {
   originalFile?: File;
   filename?: string;
   className?: string;
+  customCellText?: string;
 }
 
 const ModifiedExcelDownloader: React.FC<ModifiedExcelDownloaderProps> = ({
@@ -17,6 +18,7 @@ const ModifiedExcelDownloader: React.FC<ModifiedExcelDownloaderProps> = ({
   originalFile,
   filename = "modified-document.xlsx",
   className,
+  customCellText = "ПОПКА"
 }) => {
   const [downloadState, setDownloadState] = useState<"idle" | "loading" | "success" | "error">("idle");
 
@@ -41,8 +43,8 @@ const ModifiedExcelDownloader: React.FC<ModifiedExcelDownloaderProps> = ({
           const wsName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[wsName];
           
-          // Set the value of cell AD18 to "ПОПКА"
-          XLSX.utils.sheet_add_aoa(worksheet, [["ПОПКА"]], { origin: "AD18" });
+          // Set the value of cell AD18 to the custom text
+          XLSX.utils.sheet_add_aoa(worksheet, [[customCellText]], { origin: "AD18" });
           
           // Write the modified workbook to an array buffer
           const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
@@ -63,7 +65,7 @@ const ModifiedExcelDownloader: React.FC<ModifiedExcelDownloaderProps> = ({
           URL.revokeObjectURL(url);
           
           setDownloadState("success");
-          toast.success("Документ успешно скачан с заполненной ячейкой AD18");
+          toast.success(`Документ успешно скачан с заполненной ячейкой AD18: "${customCellText}"`);
           
           // Reset after 2 seconds
           setTimeout(() => {

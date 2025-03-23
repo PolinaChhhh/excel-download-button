@@ -22,6 +22,7 @@ const Index = () => {
   const [originalFile, setOriginalFile] = useState<File | null>(null);
   const [isEditable, setIsEditable] = useState(true);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
+  const [customCellText, setCustomCellText] = useState("ПОПКА");
   const isMobile = useIsMobile();
 
   const handleFileUploaded = (data: Partial<InvoiceData>, file: File) => {
@@ -33,7 +34,7 @@ const Index = () => {
     setOriginalFile(file);
     setIsEditable(true);
     setIsDataLoaded(true);
-    toast.success("Данные из Excel успешно загружены! Ячейка AD18 будет заполнена значением \"ПОПКА\"");
+    toast.success(`Данные из Excel успешно загружены! Ячейка AD18 будет заполнена текстом "${customCellText}"`);
   };
 
   const handlePrint = () => {
@@ -60,6 +61,8 @@ const Index = () => {
             invoiceData={invoiceData}
             originalFile={originalFile}
             isDataLoaded={isDataLoaded}
+            customCellText={customCellText}
+            onCustomCellTextChange={setCustomCellText}
           />
           
           <TemplateSection />
