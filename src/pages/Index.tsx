@@ -1,10 +1,10 @@
-
 import React, { useState } from "react";
 import InvoiceTable from "@/components/InvoiceTable";
 import ExcelUploader from "@/components/ExcelUploader";
 import InvoiceTemplateExporter from "@/components/InvoiceTemplateExporter";
+import ModifiedExcelDownloader from "@/components/ModifiedExcelDownloader";
 import { Button } from "@/components/ui/button";
-import { Printer, Save, Plus, Trash } from "lucide-react";
+import { Printer, Save, Plus, Trash, Download } from "lucide-react";
 import { toast } from "sonner";
 
 // Import the InvoiceData type from the InvoiceTable component
@@ -25,13 +25,14 @@ const Index = () => {
   const [isDataLoaded, setIsDataLoaded] = useState(false);
 
   const handleFileUploaded = (data: Partial<InvoiceData>) => {
+    // Store the updated data with the special cell AD18 value
     setInvoiceData({
       ...emptyInvoiceData,
       ...data
     });
     setIsEditable(true);
     setIsDataLoaded(true);
-    toast.success("Данные из Excel успешно загружены! Теперь вы можете редактировать их.");
+    toast.success("Данные из Excel успешно загружены! Ячейка AD18 заполнена значением \"ПОПКА\"");
   };
 
   const handlePrint = () => {
@@ -109,9 +110,15 @@ const Index = () => {
             <h2 className="text-lg font-medium mb-4">Загрузка данных</h2>
             <ExcelUploader onFileUploaded={handleFileUploaded} />
             {isDataLoaded && (
-              <p className="mt-3 text-sm text-green-600">
-                ✓ Данные загружены. Вы можете редактировать их в форме ниже.
-              </p>
+              <div className="mt-3">
+                <p className="text-sm text-green-600 mb-3">
+                  ✓ Данные загружены и ячейка AD18 заполнена значением "ПОПКА".
+                </p>
+                <ModifiedExcelDownloader 
+                  data={invoiceData} 
+                  filename="modified-torg12.xlsx"
+                />
+              </div>
             )}
           </div>
           

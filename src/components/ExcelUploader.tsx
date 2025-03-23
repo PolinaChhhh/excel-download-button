@@ -69,7 +69,7 @@ const ExcelUploader: React.FC<ExcelUploaderProps> = ({ onFileUploaded, className
       // Mock parsing delay
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Mock data from the Excel file
+      // Mock data from the Excel file with the modified cell AD18 = "ПОПКА"
       const mockData = {
         consignor: "ООО Компания",
         supplier: "ЗАО Поставщик",
@@ -77,6 +77,7 @@ const ExcelUploader: React.FC<ExcelUploaderProps> = ({ onFileUploaded, className
         basis: "Договор поставки №123 от 01.06.2023",
         documentNumber: "456",
         documentDate: "01.05.2023",
+        cellAD18: "ПОПКА", // Adding the special cell content
         items: [
           {
             id: 1,
@@ -101,7 +102,7 @@ const ExcelUploader: React.FC<ExcelUploaderProps> = ({ onFileUploaded, className
       // Pass the parsed data to the parent component
       onFileUploaded(mockData);
       
-      toast.success('File uploaded successfully');
+      toast.success('Файл загружен и ячейка AD18 заполнена значением "ПОПКА"');
     } catch (error) {
       console.error('Error uploading file:', error);
       toast.error('Failed to upload file');
