@@ -61,7 +61,6 @@ const ModifiedExcelDownloader: React.FC<ModifiedExcelDownloaderProps> = ({
           
           // Подробный вывод информации о структуре для отладки
           console.log("Информация о книге:", workbook);
-          console.log("Стили книги:", workbook.Styles);
           console.log("Свойства листа:", Object.keys(worksheet));
           console.log("Ячейка AD18 до изменения:", worksheet["AD18"]);
           
