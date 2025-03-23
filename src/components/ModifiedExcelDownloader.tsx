@@ -36,18 +36,45 @@ const ModifiedExcelDownloader: React.FC<ModifiedExcelDownloaderProps> = ({
         try {
           const arrayBuffer = e.target?.result as ArrayBuffer;
           
-          // Parse the Excel file
-          const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+          // Parse the Excel file with full formatting options
+          const workbook = XLSX.read(arrayBuffer, { 
+            type: 'array',
+            cellStyles: true,
+            cellDates: true,
+            cellNF: true,
+            cellFormula: true,
+            bookVBA: true,
+            bookSST: true,
+            WTF: true // Parse all unknown and non-standard properties
+          });
           
           // Get the first worksheet
           const wsName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[wsName];
           
-          // Set the value of cell AD18 to the custom text
-          XLSX.utils.sheet_add_aoa(worksheet, [[customCellText]], { origin: "AD18" });
+          // Get the cell AD18 properties before modifying it
+          const cellAddress = "AD18";
+          const originalCell = worksheet[cellAddress] || {};
           
-          // Write the modified workbook to an array buffer
-          const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+          // Preserve the original formatting, style, and other properties
+          const cellStyle = originalCell.s || {}; // Get original style or empty object
+          
+          // Set the value of cell AD18 to the custom text while preserving formatting
+          worksheet[cellAddress] = {
+            ...originalCell,
+            v: customCellText, // Value
+            t: 's', // Type: string
+            s: cellStyle // Style: preserve original style
+          };
+          
+          // Write the modified workbook to an array buffer with full formatting preservation
+          const excelBuffer = XLSX.write(workbook, { 
+            bookType: 'xlsx', 
+            type: 'array',
+            cellStyles: true,
+            bookSST: true,
+            compression: true
+          });
           
           // Create a blob from the buffer
           const blob = new Blob([excelBuffer], { 
