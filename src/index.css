@@ -125,6 +125,21 @@
     @apply absolute inset-0 flex items-center justify-center bg-white/90 
            opacity-0 transition-opacity duration-300;
   }
+
+  /* Added responsive card styles */
+  .responsive-card {
+    @apply bg-white rounded-lg border border-border shadow-sm transition-all duration-200
+           hover:shadow-md p-4 sm:p-6;
+  }
+
+  /* Added animation classes */
+  .fade-in {
+    @apply animate-fade-in;
+  }
+
+  .slide-up {
+    @apply animate-slide-up;
+  }
 }
 
 /* Print styles for invoice */
@@ -153,5 +168,21 @@
     font-size: inherit !important;
     line-height: inherit !important;
     color: black !important;
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .container {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+  
+  .card-title {
+    font-size: 1.1rem !important;
+  }
+  
+  .card-content {
+    padding: 1rem !important;
   }
 }

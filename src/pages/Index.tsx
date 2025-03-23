@@ -6,6 +6,7 @@ import UploadSection from "@/components/invoice/UploadSection";
 import TemplateSection from "@/components/invoice/TemplateSection";
 import InvoiceForm from "@/components/invoice/InvoiceForm";
 import { toast } from "sonner";
+import { useIsMobile } from '@/hooks/use-mobile';
 
 // Default empty invoice data with required fields
 const emptyInvoiceData: InvoiceData = {
@@ -21,6 +22,7 @@ const Index = () => {
   const [originalFile, setOriginalFile] = useState<File | null>(null);
   const [isEditable, setIsEditable] = useState(true);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
+  const isMobile = useIsMobile();
 
   const handleFileUploaded = (data: Partial<InvoiceData>, file: File) => {
     // Store the updated data with the special cell AD18 value
@@ -46,13 +48,13 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-gray-50 print:bg-white">
       {/* Header with buttons - hidden when printing */}
-      <div className="container mx-auto py-6 print:hidden">
+      <div className={`container mx-auto py-6 px-4 sm:px-6 ${isMobile ? 'space-y-4' : 'space-y-6'} print:hidden`}>
         <Header 
           title="Товарная накладная (ТОРГ-12)" 
           description="Заполните форму вручную или загрузите данные из Excel файла"
         />
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <div className={`grid grid-cols-1 ${isMobile ? 'gap-4' : 'lg:grid-cols-2 gap-6'} mb-6`}>
           <UploadSection 
             onFileUploaded={handleFileUploaded}
             invoiceData={invoiceData}

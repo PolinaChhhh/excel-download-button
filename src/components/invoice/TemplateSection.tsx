@@ -1,13 +1,23 @@
 
 import React from 'react';
 import InvoiceTemplateExporter from "@/components/InvoiceTemplateExporter";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const TemplateSection: React.FC = () => {
+  const isMobile = useIsMobile();
+  
   return (
-    <div className="bg-white p-6 rounded-lg shadow-sm border">
-      <h2 className="text-lg font-medium mb-4">Скачать шаблоны</h2>
-      <InvoiceTemplateExporter />
-    </div>
+    <Card className="h-full">
+      <CardHeader className={`${isMobile ? 'pb-2' : 'pb-4'}`}>
+        <CardTitle className={`${isMobile ? 'text-base' : 'text-lg'}`}>
+          Скачать шаблоны
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <InvoiceTemplateExporter />
+      </CardContent>
+    </Card>
   );
 };
 
