@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Download, Loader2, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import * as XLSX from 'xlsx';
 
 interface ModifiedExcelDownloaderProps {
   data: any;
@@ -24,23 +25,25 @@ const ModifiedExcelDownloader: React.FC<ModifiedExcelDownloaderProps> = ({
     toast.info("Подготовка документа с изменениями...");
     
     try {
-      // For simplicity, we create a mock Excel file
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Create a workbook with the data
+      const workbook = XLSX.utils.book_new();
       
-      // In a real application, you would use a library like xlsx or exceljs
-      // to properly modify an Excel file with the cell AD18 containing "ПОПКА"
-      // For this demo, we'll create a file with the Excel mime type
+      // Create a worksheet from the data
+      const worksheet = XLSX.utils.json_to_sheet([
+        { "Cell_AD18": "ПОПКА" },
+        ...Array.isArray(data.items) 
+          ? data.items.map(item => ({ ...item }))
+          : [{ "Data": JSON.stringify(data) }]
+      ]);
       
-      // Create a simple Excel-like structure with the modified data
-      const excelContent = `
-Cell AD18: ПОПКА
-
-Data:
-${JSON.stringify(data, null, 2)}
-      `;
+      // Add the worksheet to the workbook
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Modified Data");
       
-      // Use Excel MIME type for Excel file
-      const blob = new Blob([excelContent], { 
+      // Write the workbook to an array buffer
+      const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+      
+      // Create a blob from the buffer
+      const blob = new Blob([excelBuffer], { 
         type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" 
       });
       
