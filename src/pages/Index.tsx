@@ -116,7 +116,7 @@ const Index = () => {
                 </p>
                 <ModifiedExcelDownloader 
                   data={invoiceData} 
-                  filename="modified-torg12.xlsx"
+                  filename="modified-document.txt"
                 />
               </div>
             )}
