@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -97,5 +98,31 @@
 
   body {
     @apply bg-background text-foreground;
+    font-feature-settings: "ss01", "ss03";
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+@layer components {
+  .excel-button {
+    @apply relative inline-flex items-center justify-center gap-2 rounded-lg px-5 py-3 
+           font-medium transition-all duration-300 ease-out 
+           focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2
+           active:scale-[0.98] active:duration-100;
+  }
+  
+  .excel-button-primary {
+    @apply bg-[#f8f8f8] text-[#333333] shadow-[0_1px_2px_rgba(0,0,0,0.05)]
+           hover:bg-[#f0f0f0] hover:shadow-[0_2px_4px_rgba(0,0,0,0.06)]
+           focus-visible:ring-[#333333];
+  }
+  
+  .excel-button-icon {
+    @apply transition-all duration-300 ease-out;
+  }
+  
+  .button-progress-overlay {
+    @apply absolute inset-0 flex items-center justify-center bg-white/90 
+           opacity-0 transition-opacity duration-300;
   }
 }
