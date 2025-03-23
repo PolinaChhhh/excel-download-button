@@ -1,9 +1,10 @@
+
 import React, { useState } from "react";
 import InvoiceTable from "@/components/InvoiceTable";
 import ExcelUploader from "@/components/ExcelUploader";
 import InvoiceTemplateExporter from "@/components/InvoiceTemplateExporter";
 import { Button } from "@/components/ui/button";
-import { Printer, Save } from "lucide-react";
+import { Printer, Save, Plus, Trash } from "lucide-react";
 import { toast } from "sonner";
 
 // Import the InvoiceData type from the InvoiceTable component
@@ -21,23 +22,75 @@ const emptyInvoiceData: InvoiceData = {
 const Index = () => {
   const [invoiceData, setInvoiceData] = useState<InvoiceData>(emptyInvoiceData);
   const [isEditable, setIsEditable] = useState(true);
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
 
   const handleFileUploaded = (data: Partial<InvoiceData>) => {
     setInvoiceData({
       ...emptyInvoiceData,
       ...data
     });
+    setIsEditable(true);
+    setIsDataLoaded(true);
+    toast.success("Данные из Excel успешно загружены! Теперь вы можете редактировать их.");
   };
 
   const handlePrint = () => {
     setIsEditable(false); // Switch to view mode for printing
     setTimeout(() => {
       window.print();
+      // After printing, switch back to edit mode
+      setTimeout(() => setIsEditable(true), 500);
     }, 300);
   };
 
   const handleSave = () => {
     toast.success("Форма сохранена!");
+  };
+
+  const addNewItem = () => {
+    const newItems = [...(invoiceData.items || [])];
+    const newId = newItems.length > 0 ? Math.max(...newItems.map(item => item.id)) + 1 : 1;
+    
+    newItems.push({
+      id: newId,
+      name: "",
+      code: "",
+      unit: "",
+      unitCode: "",
+      packageType: "",
+      quantityInPackage: "",
+      numberOfPackages: "",
+      weight: "",
+      totalWeight: "",
+      price: "",
+      sumWithoutVAT: "",
+      vatRate: "",
+      vatAmount: "",
+      totalSum: ""
+    });
+    
+    setInvoiceData({
+      ...invoiceData,
+      items: newItems
+    });
+    
+    toast.success("Добавлена новая строка");
+  };
+
+  const removeLastItem = () => {
+    if (invoiceData.items && invoiceData.items.length > 1) {
+      const newItems = [...invoiceData.items];
+      newItems.pop();
+      
+      setInvoiceData({
+        ...invoiceData,
+        items: newItems
+      });
+      
+      toast.success("Последняя строка удалена");
+    } else {
+      toast.error("Должна остаться хотя бы одна строка");
+    }
   };
 
   return (
@@ -55,6 +108,11 @@ const Index = () => {
           <div className="bg-white p-6 rounded-lg shadow-sm border">
             <h2 className="text-lg font-medium mb-4">Загрузка данных</h2>
             <ExcelUploader onFileUploaded={handleFileUploaded} />
+            {isDataLoaded && (
+              <p className="mt-3 text-sm text-green-600">
+                ✓ Данные загружены. Вы можете редактировать их в форме ниже.
+              </p>
+            )}
           </div>
           
           <div className="bg-white p-6 rounded-lg shadow-sm border">
@@ -67,7 +125,11 @@ const Index = () => {
           <div className="flex justify-between items-center">
             <div>
               <h2 className="text-lg font-medium">Форма ТОРГ-12</h2>
-              <p className="text-sm text-gray-500">Редактируйте данные напрямую в форме</p>
+              <p className="text-sm text-gray-500">
+                {isEditable 
+                  ? "Редактируйте данные напрямую в форме" 
+                  : "Просмотр формы перед печатью"}
+              </p>
             </div>
             <div className="flex gap-2">
               <Button 
@@ -88,6 +150,35 @@ const Index = () => {
             </div>
           </div>
         </div>
+        
+        {/* Table row management controls */}
+        {isEditable && (
+          <div className="bg-white p-4 rounded-lg shadow-sm border mb-6">
+            <div className="flex items-center justify-between">
+              <h3 className="font-medium">Управление строками таблицы</h3>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="flex items-center gap-1"
+                  onClick={addNewItem}
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>Добавить строку</span>
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="flex items-center gap-1 text-red-500 hover:text-red-600"
+                  onClick={removeLastItem}
+                >
+                  <Trash className="h-4 w-4" />
+                  <span>Удалить строку</span>
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Invoice Table */}
