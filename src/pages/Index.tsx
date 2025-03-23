@@ -1,11 +1,10 @@
-
 import React, { useState } from "react";
 import InvoiceTable from "@/components/InvoiceTable";
 import ExcelUploader from "@/components/ExcelUploader";
 import InvoiceTemplateExporter from "@/components/InvoiceTemplateExporter";
 import ModifiedExcelDownloader from "@/components/ModifiedExcelDownloader";
 import { Button } from "@/components/ui/button";
-import { Printer, Save, Plus, Trash, Download } from "lucide-react";
+import { Printer, Save, Plus, Trash } from "lucide-react";
 import { toast } from "sonner";
 
 // Import the InvoiceData type from the InvoiceTable component
@@ -22,18 +21,20 @@ const emptyInvoiceData: InvoiceData = {
 
 const Index = () => {
   const [invoiceData, setInvoiceData] = useState<InvoiceData>(emptyInvoiceData);
+  const [originalFile, setOriginalFile] = useState<File | null>(null);
   const [isEditable, setIsEditable] = useState(true);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
 
-  const handleFileUploaded = (data: Partial<InvoiceData>) => {
+  const handleFileUploaded = (data: Partial<InvoiceData>, file: File) => {
     // Store the updated data with the special cell AD18 value
     setInvoiceData({
       ...emptyInvoiceData,
       ...data
     });
+    setOriginalFile(file);
     setIsEditable(true);
     setIsDataLoaded(true);
-    toast.success("Данные из Excel успешно загружены! Ячейка AD18 заполнена значением \"ПОПКА\"");
+    toast.success("Данные из Excel успешно загружены! Ячейка AD18 будет заполнена значением \"ПОПКА\"");
   };
 
   const handlePrint = () => {
@@ -113,10 +114,11 @@ const Index = () => {
             {isDataLoaded && (
               <div className="mt-3">
                 <p className="text-sm text-green-600 mb-3">
-                  ✓ Данные загружены и ячейка AD18 заполнена значением "ПОПКА".
+                  ✓ Данные загружены и ячейка AD18 будет заполнена значением "ПОПКА".
                 </p>
                 <ModifiedExcelDownloader 
                   data={invoiceData} 
+                  originalFile={originalFile}
                   filename="modified-document.xlsx"
                 />
               </div>

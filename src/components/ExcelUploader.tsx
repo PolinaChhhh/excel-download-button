@@ -5,9 +5,10 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
+import * as XLSX from 'xlsx';
 
 interface ExcelUploaderProps {
-  onFileUploaded: (data: any) => void;
+  onFileUploaded: (data: any, originalFile: File) => void;
   className?: string;
 }
 
@@ -63,50 +64,42 @@ const ExcelUploader: React.FC<ExcelUploaderProps> = ({ onFileUploaded, className
     setIsUploading(true);
 
     try {
-      // In a real application, you would use a library like xlsx or exceljs
-      // to parse the Excel file here. For this demo, we'll mock the parsing.
+      // Read the file data
+      const reader = new FileReader();
       
-      // Mock parsing delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Mock data from the Excel file with the modified cell AD18 = "ПОПКА"
-      const mockData = {
-        consignor: "ООО Компания",
-        supplier: "ЗАО Поставщик",
-        payer: "ИП Иванов И.И.",
-        basis: "Договор поставки №123 от 01.06.2023",
-        documentNumber: "456",
-        documentDate: "01.05.2023",
-        cellAD18: "ПОПКА", // Adding the special cell content
-        items: [
-          {
-            id: 1,
-            name: "Товар А",
-            code: "001",
-            unit: "шт",
-            unitCode: "796",
-            packageType: "-",
-            quantityInPackage: "1",
-            numberOfPackages: "10",
-            weight: "0.5",
-            totalWeight: "5",
-            price: "100.00",
-            sumWithoutVAT: "1000.00",
-            vatRate: "20",
-            vatAmount: "200.00",
-            totalSum: "1200.00"
-          }
-        ]
+      reader.onload = async (e) => {
+        try {
+          const data = e.target?.result;
+          const workbook = XLSX.read(data, { type: 'binary' });
+          
+          // Get first worksheet
+          const wsname = workbook.SheetNames[0];
+          const ws = workbook.Sheets[wsname];
+          
+          // Convert worksheet to JSON
+          const jsonData = XLSX.utils.sheet_to_json(ws);
+          
+          // Pass both the data and original file to the parent component
+          onFileUploaded({ items: jsonData }, file);
+          
+          toast.success('Файл успешно загружен, ячейка AD18 будет заполнена значением "ПОПКА"');
+        } catch (error) {
+          console.error('Error parsing Excel file:', error);
+          toast.error('Failed to parse Excel file');
+        } finally {
+          setIsUploading(false);
+        }
       };
       
-      // Pass the parsed data to the parent component
-      onFileUploaded(mockData);
+      reader.onerror = () => {
+        toast.error('Error reading file');
+        setIsUploading(false);
+      };
       
-      toast.success('Файл загружен и ячейка AD18 заполнена значением "ПОПКА"');
+      reader.readAsBinaryString(file);
     } catch (error) {
       console.error('Error uploading file:', error);
       toast.error('Failed to upload file');
-    } finally {
       setIsUploading(false);
     }
   };
