@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 
-interface InvoiceData {
+export interface InvoiceData {
   // Header data
   form?: string;
   code?: string;

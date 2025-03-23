@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import InvoiceTable from "@/components/InvoiceTable";
 import ExcelUploader from "@/components/ExcelUploader";
@@ -7,8 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Printer, Save } from "lucide-react";
 import { toast } from "sonner";
 
-// Default empty invoice data
-const emptyInvoiceData = {
+// Import the InvoiceData type from the InvoiceTable component
+import type { InvoiceData } from "@/components/InvoiceTable";
+
+// Default empty invoice data with required fields
+const emptyInvoiceData: InvoiceData = {
   form: "ТОРГ-12",
   code: "0330212",
   okud: "0330212",
@@ -17,10 +19,10 @@ const emptyInvoiceData = {
 };
 
 const Index = () => {
-  const [invoiceData, setInvoiceData] = useState(emptyInvoiceData);
+  const [invoiceData, setInvoiceData] = useState<InvoiceData>(emptyInvoiceData);
   const [isEditable, setIsEditable] = useState(true);
 
-  const handleFileUploaded = (data: any) => {
+  const handleFileUploaded = (data: Partial<InvoiceData>) => {
     setInvoiceData({
       ...emptyInvoiceData,
       ...data
@@ -93,7 +95,7 @@ const Index = () => {
         <div className="bg-white shadow-sm rounded-lg overflow-auto print:shadow-none print:rounded-none">
           <InvoiceTable 
             data={invoiceData} 
-            onDataChange={setInvoiceData} 
+            onDataChange={(newData: InvoiceData) => setInvoiceData(newData)} 
             editable={isEditable}
           />
         </div>
