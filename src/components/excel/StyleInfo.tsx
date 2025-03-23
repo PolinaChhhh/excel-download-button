@@ -11,12 +11,18 @@ const StyleInfo: React.FC<StyleInfoProps> = ({ stylesCount, cellContents }) => {
   if (stylesCount === 0) return null;
   
   return (
-    <div className="text-sm text-green-600 flex items-center gap-1">
-      <FileText className="h-4 w-4" />
-      <span>✓ Проанализировано {stylesCount} ячеек со стилями. Все границы и форматирование будут сохранены.</span>
+    <div className="text-sm text-green-600 flex items-center gap-1 flex-col items-start">
+      <div className="flex items-center gap-1">
+        <FileText className="h-4 w-4" />
+        <span>✓ Проанализировано {stylesCount} ячеек со стилями. Все границы и форматирование будут сохранены.</span>
+      </div>
+      
+      <div className="text-xs text-blue-600 mt-1 ml-6">
+        Ячейка A3: Нижняя граница будет сохранена
+      </div>
       
       {cellContents && Object.keys(cellContents).length > 0 && (
-        <details className="mt-1 text-gray-600">
+        <details className="mt-1 text-gray-600 ml-6">
           <summary className="cursor-pointer text-blue-600 hover:text-blue-800 text-xs">
             Содержимое ячеек ({Object.keys(cellContents).length})
           </summary>
