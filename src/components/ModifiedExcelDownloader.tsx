@@ -44,7 +44,6 @@ const ModifiedExcelDownloader: React.FC<ModifiedExcelDownloaderProps> = ({
             cellNF: true,
             cellFormula: true,
             bookVBA: true,
-            bookSST: true,
             WTF: true // Parse all unknown and non-standard properties
           });
           
@@ -72,7 +71,6 @@ const ModifiedExcelDownloader: React.FC<ModifiedExcelDownloaderProps> = ({
             bookType: 'xlsx', 
             type: 'array',
             cellStyles: true,
-            bookSST: true,
             compression: true
           });
           
