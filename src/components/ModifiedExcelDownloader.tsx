@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Download, Loader2, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -36,41 +35,61 @@ const ModifiedExcelDownloader: React.FC<ModifiedExcelDownloaderProps> = ({
         try {
           const arrayBuffer = e.target?.result as ArrayBuffer;
           
-          // Parse the Excel file with full formatting options
+          // Parse the Excel file with all possible formatting options enabled
           const workbook = XLSX.read(arrayBuffer, { 
             type: 'array',
-            cellStyles: true,
-            cellDates: true,
-            cellNF: true,
-            cellFormula: true,
-            bookVBA: true,
-            WTF: true // Parse all unknown and non-standard properties
+            cellStyles: true,   // Important for cell styling
+            cellDates: true,    // Preserve date formats
+            cellNF: true,       // Preserve number formats
+            cellFormula: true,  // Preserve formulas
+            bookVBA: true,      // Preserve VBA
+            WTF: true           // Parse all unknown and non-standard properties
           });
           
           // Get the first worksheet
           const wsName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[wsName];
           
+          // Log worksheet details for debugging
+          console.log("Worksheet structure:", Object.keys(worksheet));
+          console.log("Cell AD18 before:", worksheet["AD18"]);
+          
           // Get the cell AD18 properties before modifying it
           const cellAddress = "AD18";
           const originalCell = worksheet[cellAddress] || {};
           
-          // Preserve the original formatting, style, and other properties
-          const cellStyle = originalCell.s || {}; // Get original style or empty object
+          // Preserve ALL original properties
+          // Ensure we keep every style property
+          const cellStyle = originalCell.s || {}; 
           
-          // Set the value of cell AD18 to the custom text while preserving formatting
+          // Create a complete cell object that preserves everything
           worksheet[cellAddress] = {
-            ...originalCell,
-            v: customCellText, // Value
-            t: 's', // Type: string
-            s: cellStyle // Style: preserve original style
+            ...originalCell,       // Keep all original properties
+            v: customCellText,     // Set the raw value
+            w: customCellText,     // Set the formatted text
+            t: 's',                // Type: string
+            s: cellStyle,          // Style: preserve original style including borders, font, etc.
           };
+          
+          // Log the modified cell for debugging
+          console.log("Cell AD18 after:", worksheet[cellAddress]);
+          
+          // Ensure worksheet properties are preserved
+          if (!worksheet['!cols']) {
+            console.warn("Column widths not found in original file");
+          }
+          if (!worksheet['!rows']) {
+            console.warn("Row heights not found in original file");
+          }
+          if (!worksheet['!merges']) {
+            console.warn("Merged cells not found in original file");
+          }
           
           // Write the modified workbook to an array buffer with full formatting preservation
           const excelBuffer = XLSX.write(workbook, { 
             bookType: 'xlsx', 
             type: 'array',
-            cellStyles: true,
+            cellStyles: true,     // Very important for preserving styles
             compression: true
           });
           
