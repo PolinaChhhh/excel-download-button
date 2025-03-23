@@ -1,11 +1,11 @@
 
 import React from 'react';
-import { Download, Loader2, Check } from 'lucide-react';
+import { Download, Loader2, Check, FileSearch } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface DownloadButtonProps {
   onClick: () => void;
-  downloadState: "idle" | "loading" | "success" | "error";
+  downloadState: "idle" | "loading" | "analyzing" | "validating" | "success" | "error";
   disabled: boolean;
   className?: string;
 }
@@ -34,6 +34,20 @@ const DownloadButton: React.FC<DownloadButtonProps> = ({
         <>
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           Подготовка файла...
+        </>
+      )}
+      
+      {downloadState === "analyzing" && (
+        <>
+          <FileSearch className="mr-2 h-4 w-4 animate-spin" />
+          Анализ стилей документа...
+        </>
+      )}
+      
+      {downloadState === "validating" && (
+        <>
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          Проверка документа...
         </>
       )}
       

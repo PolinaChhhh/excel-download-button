@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { toast } from 'sonner';
 import { analyzeExcelFile, modifyAndDownloadExcel, validateCellStyles } from '@/utils/excelUtils';
@@ -7,6 +6,10 @@ import DownloadButton from '@/components/excel/DownloadButton';
 import StyleInfo from '@/components/excel/StyleInfo';
 import ValidationResults from '@/components/excel/ValidationResults';
 import type { CellStyle, ExcelDownloaderProps, ValidationSummary } from '@/types/excel';
+
+// Import the Button and icons at the top
+import { Button } from '@/components/ui/button';
+import { CheckSquare, Loader2 } from 'lucide-react';
 
 const ModifiedExcelDownloader: React.FC<ExcelDownloaderProps> = ({
   data,
@@ -199,9 +202,5 @@ const ModifiedExcelDownloader: React.FC<ExcelDownloaderProps> = ({
     </div>
   );
 };
-
-// Import the Button and icons at the top
-import { Button } from '@/components/ui/button';
-import { CheckSquare, Loader2 } from 'lucide-react';
 
 export default ModifiedExcelDownloader;
