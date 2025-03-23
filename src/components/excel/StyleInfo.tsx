@@ -18,7 +18,7 @@ const StyleInfo: React.FC<StyleInfoProps> = ({ stylesCount, cellContents }) => {
       </div>
       
       <div className="text-xs text-blue-600 mt-1 ml-6">
-        Ячейка A3: Нижняя граница будет сохранена
+        Ячейка A3: Нижняя граница усилена и будет гарантированно сохранена
       </div>
       
       {cellContents && Object.keys(cellContents).length > 0 && (

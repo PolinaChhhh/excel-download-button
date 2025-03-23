@@ -101,9 +101,9 @@ export const analyzeExcelFile = async (file: File): Promise<{
                     cellStyle.style.border = {};
                   }
                   
-                  // Set the bottom border style
+                  // Set the bottom border style with stronger properties
                   cellStyle.style.border.bottom = {
-                    style: 'thin',
+                    style: 'medium', // Changed from 'thin' to 'medium' for better visibility
                     color: { rgb: "000000" }
                   };
                 }
@@ -300,7 +300,7 @@ export const modifyAndDownloadExcel = async (
         // Special attention to cell A3
         if (worksheet['A3']) {
           console.log("Checking cell A3 before saving:", worksheet['A3']);
-          // Ensure the bottom border is preserved
+          // Ensure the bottom border is preserved with stronger properties
           if (!worksheet['A3'].s) {
             worksheet['A3'].s = {};
           }
@@ -309,9 +309,9 @@ export const modifyAndDownloadExcel = async (
             worksheet['A3'].s.border = {};
           }
           
-          // Always add a bottom border to A3
+          // Always add a bottom border to A3 with stronger properties
           worksheet['A3'].s.border.bottom = { 
-            style: 'thin', 
+            style: 'medium', // Changed from 'thin' to 'medium' for better visibility
             color: { rgb: "000000" } 
           };
           
