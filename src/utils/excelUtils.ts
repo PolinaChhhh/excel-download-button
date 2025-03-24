@@ -416,7 +416,7 @@ export const modifyAndDownloadExcel = async (
         console.log("Original column widths before modification:", originalColWidths);
         
         // Special cells that need specific styling
-        const specialCells = {
+        const specialCells: Record<string, any> = {
           'BF4': {
             font: {
               name: 'Arial',
@@ -545,8 +545,8 @@ export const modifyAndDownloadExcel = async (
               worksheet[cellAddress].s = {};
             }
             
-            // Apply font settings
-            if (style.font) {
+            // Apply font settings if the style has a font property
+            if ('font' in style) {
               if (!worksheet[cellAddress].s.font) {
                 worksheet[cellAddress].s.font = {};
               }
@@ -559,8 +559,8 @@ export const modifyAndDownloadExcel = async (
               console.log(`Applied font to ${cellAddress}:`, worksheet[cellAddress].s.font);
             }
             
-            // Apply border settings
-            if (style.border) {
+            // Apply border settings if the style has a border property
+            if ('border' in style) {
               if (!worksheet[cellAddress].s.border) {
                 worksheet[cellAddress].s.border = {};
               }
