@@ -22,6 +22,10 @@ export const modifyAndDownloadExcel = async (
         const workbook = await createWorkbookFromFile(arrayBuffer);
         const worksheet = getFirstWorksheet(workbook);
         
+        console.log("Starting Excel modifications...");
+        
+        // Apply modifications in order of operations for best results
+        
         // 1. Set the custom cell text (AD18)
         setCustomCellText(worksheet, 'AD18', customCellText);
         
@@ -45,15 +49,32 @@ export const modifyAndDownloadExcel = async (
           ['AD18', 'BF4', 'BJ6', 'BM4', 'BM5', 'A3']
         );
         
+        // 7. Validate critical cells to ensure styles were applied
+        const criticalCells = ['BF4', 'BJ6', 'BM4'];
+        criticalCells.forEach(cellAddr => {
+          const cell = worksheet.getCell(cellAddr);
+          console.log(`Final state of cell ${cellAddr}:`, {
+            value: cell.value,
+            font: cell.font,
+            border: cell.border
+          });
+        });
+        
+        console.log("Excel modifications complete, preparing download...");
+        
         // Download the modified workbook
         await downloadWorkbook(workbook, filename);
+        console.log("Download completed");
+        
         resolve();
       } catch (error) {
+        console.error("Error modifying Excel file:", error);
         reject(error);
       }
     };
     
     fileReader.onerror = (error) => {
+      console.error("File reading error:", error);
       reject(error);
     };
     
