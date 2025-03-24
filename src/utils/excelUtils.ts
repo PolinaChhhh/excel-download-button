@@ -37,8 +37,15 @@ export const analyzeExcelFile = async (file: File): Promise<{
         
         // Check if there are any merged cells
         if (merges) {
-          // Get array of merge cell ranges
-          const mergeRanges = worksheet.model.mergeCells ? Object.keys(worksheet.model.mergeCells) : [];
+          // Get array of merge cell ranges from worksheet
+          const mergeRanges: string[] = [];
+          
+          // Access the _merges property safely (it might be private but we need it)
+          // @ts-ignore - ExcelJS internal structure
+          if (worksheet.mergeCells && worksheet.mergeCells._merges) {
+            // @ts-ignore - ExcelJS internal structure
+            mergeRanges.push(...Object.keys(worksheet.mergeCells._merges));
+          }
           
           mergeRanges.forEach(mergeRange => {
             // Split range into start and end cell references
@@ -422,7 +429,12 @@ export const modifyAndDownloadExcel = async (
           const endRef = worksheet.getCell(endCell);
           
           // Check if the range is already merged
-          const mergeRanges = worksheet.model.mergeCells ? Object.keys(worksheet.model.mergeCells) : [];
+          const mergeRanges: string[] = [];
+          // @ts-ignore - ExcelJS internal structure
+          if (worksheet.mergeCells && worksheet.mergeCells._merges) {
+            // @ts-ignore - ExcelJS internal structure
+            mergeRanges.push(...Object.keys(worksheet.mergeCells._merges));
+          }
           const isMerged = mergeRanges.includes(`${startCell}:${endCell}`);
           
           if (!isMerged) {
@@ -554,3 +566,4 @@ export const modifyAndDownloadExcel = async (
 function ensureCellExists(worksheet: ExcelJS.Worksheet, cellAddress: string): ExcelJS.Cell {
   return worksheet.getCell(cellAddress);
 }
+
