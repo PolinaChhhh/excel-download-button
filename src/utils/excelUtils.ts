@@ -32,29 +32,32 @@ export const analyzeExcelFile = async (file: File): Promise<{
         // Get merged cells information
         const mergedCells: MergedCellInfo[] = [];
         
-        // Using getMergedCells() to get an array of merge ranges
-        const merges = worksheet.mergeCells._merges || {};
+        // Using direct access to the mergeCells property
+        const merges = worksheet.mergeCells;
         
-        // Convert merge cells object to array 
-        Object.keys(merges).forEach(mergeKey => {
-          const mergeRange = mergeKey; // The key is the range (e.g., 'A1:B2')
+        // Check if there are any merged cells
+        if (merges) {
+          // Get array of merge cell ranges
+          const mergeRanges = worksheet.model.mergeCells ? Object.keys(worksheet.model.mergeCells) : [];
           
-          // Split range into start and end cell references
-          const [startCell, endCell] = mergeRange.split(':');
-          
-          // Get cell references
-          const startCellRef = worksheet.getCell(startCell);
-          const endCellRef = worksheet.getCell(endCell);
-          
-          mergedCells.push({
-            startCell,
-            endCell,
-            startRow: startCellRef.row,
-            startCol: startCellRef.col,
-            endRow: endCellRef.row,
-            endCol: endCellRef.col
+          mergeRanges.forEach(mergeRange => {
+            // Split range into start and end cell references
+            const [startCell, endCell] = mergeRange.split(':');
+            
+            // Get cell references
+            const startCellRef = worksheet.getCell(startCell);
+            const endCellRef = worksheet.getCell(endCell);
+            
+            mergedCells.push({
+              startCell,
+              endCell,
+              startRow: startCellRef.row,
+              startCol: startCellRef.col,
+              endRow: endCellRef.row,
+              endCol: endCellRef.col
+            });
           });
-        });
+        }
         
         console.log("Merged cells information:", mergedCells);
         
@@ -419,9 +422,8 @@ export const modifyAndDownloadExcel = async (
           const endRef = worksheet.getCell(endCell);
           
           // Check if the range is already merged
-          // In ExcelJS, mergeCells is an object with methods, not an array
-          const mergesObj = worksheet.mergeCells._merges || {};
-          const isMerged = Object.keys(mergesObj).includes(`${startCell}:${endCell}`);
+          const mergeRanges = worksheet.model.mergeCells ? Object.keys(worksheet.model.mergeCells) : [];
+          const isMerged = mergeRanges.includes(`${startCell}:${endCell}`);
           
           if (!isMerged) {
             // Merge the range if not already merged
