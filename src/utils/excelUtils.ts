@@ -1,4 +1,3 @@
-
 import * as XLSX from 'xlsx';
 import type { CellStyle, ValidationSummary, CellValidationResult } from '@/types/excel';
 
@@ -416,7 +415,7 @@ export const modifyAndDownloadExcel = async (
         console.log("Original column widths before modification:", originalColWidths);
         
         // Special cells that need specific styling
-        const specialCells: Record<string, any> = {
+        const specialCells: Record<string, { font?: { name: string; size: number }; border?: any }> = {
           'BF4': {
             font: {
               name: 'Arial',
@@ -536,43 +535,41 @@ export const modifyAndDownloadExcel = async (
           }
         });
         
-        // Apply special styling to specific cells
+        // Apply special styling to specific cells with forced font and border styling
         Object.entries(specialCells).forEach(([cellAddress, style]) => {
-          if (worksheet[cellAddress]) {
-            console.log(`Applying special style to ${cellAddress}:`, style);
+          if (!worksheet[cellAddress]) {
+            // Create the cell if it doesn't exist
+            worksheet[cellAddress] = {
+              t: 's',
+              v: '',
+              s: {}
+            };
+          }
+          
+          console.log(`Applying special style to ${cellAddress}:`, style);
+          
+          if (!worksheet[cellAddress].s) {
+            worksheet[cellAddress].s = {};
+          }
+          
+          // Apply font settings if the style has a font property
+          if (style.font) {
+            // Directly set the font property instead of merging
+            worksheet[cellAddress].s.font = {
+              name: style.font.name,
+              sz: style.font.size,
+              color: { rgb: "000000" }
+            };
             
-            if (!worksheet[cellAddress].s) {
-              worksheet[cellAddress].s = {};
-            }
+            console.log(`Forced font style for ${cellAddress}:`, worksheet[cellAddress].s.font);
+          }
+          
+          // Apply border settings if the style has a border property
+          if (style.border) {
+            // Directly set the border property
+            worksheet[cellAddress].s.border = style.border;
             
-            // Apply font settings if the style has a font property
-            if ('font' in style) {
-              if (!worksheet[cellAddress].s.font) {
-                worksheet[cellAddress].s.font = {};
-              }
-              
-              worksheet[cellAddress].s.font = {
-                ...worksheet[cellAddress].s.font,
-                ...style.font
-              };
-              
-              console.log(`Applied font to ${cellAddress}:`, worksheet[cellAddress].s.font);
-            }
-            
-            // Apply border settings if the style has a border property
-            if ('border' in style) {
-              if (!worksheet[cellAddress].s.border) {
-                worksheet[cellAddress].s.border = {};
-              }
-              
-              Object.entries(style.border).forEach(([side, borderStyle]) => {
-                worksheet[cellAddress].s.border[side] = borderStyle;
-              });
-              
-              console.log(`Applied borders to ${cellAddress}:`, worksheet[cellAddress].s.border);
-            }
-          } else {
-            console.log(`Cell ${cellAddress} not found in worksheet`);
+            console.log(`Forced border style for ${cellAddress}:`, worksheet[cellAddress].s.border);
           }
         });
         
