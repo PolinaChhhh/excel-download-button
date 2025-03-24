@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import * as XLSX from 'xlsx'; // Add this import
 import { toast } from 'sonner';
 import { analyzeExcelFile, modifyAndDownloadExcel, validateCellStyles } from '@/utils/excelUtils';
 import AnalyzeButton from '@/components/excel/AnalyzeButton';
