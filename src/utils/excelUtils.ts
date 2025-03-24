@@ -1,4 +1,3 @@
-
 import * as XLSX from 'xlsx';
 import type { CellStyle, ValidationSummary, CellValidationResult } from '@/types/excel';
 
@@ -37,6 +36,13 @@ export const analyzeExcelFile = async (file: File): Promise<{
         // Get the first worksheet
         const wsName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[wsName];
+        
+        // Store column widths for debugging and verification
+        if (worksheet['!cols']) {
+          console.log("Original column widths from file:", worksheet['!cols']);
+        } else {
+          console.log("No column widths found in original file");
+        }
         
         // Analyze cell styles and contents
         const styleCells: CellStyle[] = [];
@@ -341,12 +347,11 @@ export const modifyAndDownloadExcel = async (
         const wsName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[wsName];
         
-        // Preserve column widths
-        if (worksheet['!cols']) {
-          console.log("Original column widths found:", worksheet['!cols']);
-        } else {
-          console.log("No column widths found in original file");
-        }
+        // Store original column widths
+        const originalColWidths = worksheet['!cols'] || [];
+        
+        // Debug column widths
+        console.log("Original column widths before modification:", originalColWidths);
         
         // Apply all cell styles from original document to preserve formatting
         cellStyles.forEach(cellStyle => {
@@ -424,13 +429,41 @@ export const modifyAndDownloadExcel = async (
           s: ad18Style?.style || cellStyle, // Use analyzed style if available, or original style
         };
         
+        // Ensure column widths are preserved
+        if (worksheet['!cols']) {
+          // Make sure all column widths use wpx (pixels) for better compatibility
+          worksheet['!cols'].forEach((col: any, index: number) => {
+            if (col) {
+              // If width is in characters (wch), convert to pixels (wpx)
+              if (col.wch && !col.wpx) {
+                col.wpx = Math.round(col.wch * 7); // Approximate conversion
+              }
+              col.customWidth = 1; // Mark as custom width
+              col.hidden = false; // Ensure column is visible
+            }
+          });
+          
+          console.log("Preserved column widths for download:", worksheet['!cols']);
+        } else {
+          console.warn("No column widths found to preserve");
+        }
+        
+        // Add dimension property
+        if (worksheet['!ref']) {
+          worksheet['!dimensions'] = worksheet['!ref'];
+        }
+        
         // Write the modified workbook to buffer with full format preservation
         const wbout = XLSX.write(workbook, { 
           bookType: 'xlsx', 
           type: 'binary',
           cellStyles: true,
           bookSST: false,
-          compression: true
+          compression: true,
+          Props: {
+            Application: "Microsoft Excel", // Pretend to be Excel for better compatibility
+            AppVersion: "16.0300",
+          }
         });
         
         // Convert binary string to byte array

@@ -208,13 +208,21 @@ export const generateTemplateExcel = (
     worksheet['!rows'][rowSetting.row - 1] = { hpt: rowSetting.height * 4 }; // Convert to points
   });
   
-  // Set column widths - use direct character width as Excel expects
+  // Set column widths with explicit pixel values
   worksheet['!cols'] = [];
   templateStructure.columnSettings.forEach(colSetting => {
     const colIndex = XLSX.utils.decode_col(colSetting.column);
-    // Set the width directly in characters with a multiplier to better match Excel's expectations
-    worksheet['!cols'][colIndex] = { wpx: Math.round(colSetting.width * 9 * 7) }; // More precise pixel width
+    // Use explicit pixel widths (wpx) instead of character widths (wch)
+    // The multiplier is calibrated to match Excel's column width expectations
+    worksheet['!cols'][colIndex] = { 
+      wpx: Math.round(colSetting.width * 10 * 7), // Adjusted multiplier for better precision
+      width: colSetting.width, // Store original width for reference
+      customWidth: 1 // Flag as custom width
+    };
   });
+  
+  // Log column widths for verification
+  console.log("Template column widths:", worksheet['!cols']);
   
   // Set merged cells
   worksheet['!merges'] = templateStructure.merges.map(merge => {
@@ -280,7 +288,7 @@ export const generateTemplateExcel = (
     worksheet[cellAddress] = cell;
   });
   
-  // Define column visibility
+  // Define column visibility and worksheet range
   const lastCol = XLSX.utils.decode_col("BS");
   const range = {
     s: { r: 0, c: 0 },
@@ -288,13 +296,20 @@ export const generateTemplateExcel = (
   };
   worksheet['!ref'] = XLSX.utils.encode_range(range);
   
-  // Write to binary string with maximum style preservation
+  // Add wsDimension property for better Excel compatibility
+  worksheet['!dimensions'] = worksheet['!ref'];
+  
+  // Write to binary string with maximum style and format preservation
   const wbout = XLSX.write(workbook, { 
     bookType: 'xlsx',
     type: 'binary',
     cellStyles: true,
     bookSST: false,
-    compression: true
+    compression: true,
+    Props: {
+      Application: "Microsoft Excel", // Pretend to be Excel for better compatibility
+      AppVersion: "16.0300",
+    }
   });
   
   // Convert binary string to ArrayBuffer
