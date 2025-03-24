@@ -566,4 +566,3 @@ export const modifyAndDownloadExcel = async (
 function ensureCellExists(worksheet: ExcelJS.Worksheet, cellAddress: string): ExcelJS.Cell {
   return worksheet.getCell(cellAddress);
 }
-
