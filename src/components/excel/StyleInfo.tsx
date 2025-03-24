@@ -27,6 +27,10 @@ const StyleInfo: React.FC<StyleInfoProps> = ({ stylesCount, cellContents }) => {
         Ячейка A3: Нижняя граница усилена и будет гарантированно сохранена
       </div>
       
+      <div className="text-xs text-blue-600 mt-1 ml-6">
+        Ячейка A4: Содержит пользовательский текст с выравниванием по левому краю
+      </div>
+      
       {fontFormattedCells > 0 && (
         <div className="text-xs text-blue-600 mt-1 ml-6">
           Обнаружено {fontFormattedCells} ячеек с форматированием шрифта (размер, стиль)

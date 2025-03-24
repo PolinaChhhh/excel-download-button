@@ -2,9 +2,11 @@
 import React from 'react';
 import ExcelUploader from "@/components/ExcelUploader";
 import ModifiedExcelDownloader from "@/components/ModifiedExcelDownloader";
+import TemplateDownloader from "@/components/excel/TemplateDownloader";
 import type { InvoiceData } from "@/components/InvoiceTable";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 
 interface UploadSectionProps {
   onFileUploaded: (data: Partial<InvoiceData>, file: File) => void;
@@ -56,6 +58,13 @@ const UploadSection: React.FC<UploadSectionProps> = ({
           />
         </div>
       )}
+      
+      <Separator className="my-4" />
+      
+      <div className="mt-4">
+        <h3 className="text-md font-medium mb-3">Шаблон формы ТОРГ-12</h3>
+        <TemplateDownloader className="w-full" />
+      </div>
     </div>
   );
 };
