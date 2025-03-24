@@ -1,3 +1,4 @@
+
 import * as XLSX from 'xlsx';
 import type { CellStyle, ValidationSummary, CellValidationResult } from '@/types/excel';
 
@@ -49,8 +50,26 @@ export const analyzeExcelFile = async (file: File): Promise<{
         const cellContents: Record<string, any> = {};
         const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1:Z100');
         
-        // Special handling for A3 which we know has a bottom border
-        const specialCells = {
+        // Special cells with specific styling requirements
+        const specialCells: Record<string, any> = {
+          'BF4': { font: { name: 'Arial', size: 9 } },
+          'BM4': { 
+            border: {
+              top: { style: 'thick', color: { argb: 'FF000000' } },
+              left: { style: 'thick', color: { argb: 'FF000000' } },
+              bottom: { style: 'thick', color: { argb: 'FF000000' } },
+              right: { style: 'thick', color: { argb: 'FF000000' } }
+            }
+          },
+          'BM5': { 
+            border: {
+              top: { style: 'thick', color: { argb: 'FF000000' } },
+              left: { style: 'thick', color: { argb: 'FF000000' } },
+              bottom: { style: 'thick', color: { argb: 'FF000000' } },
+              right: { style: 'thick', color: { argb: 'FF000000' } }
+            }
+          },
+          'BJ6': { font: { name: 'Arial', size: 9 } },
           'A3': { hasBottomBorder: true }
         };
         
@@ -102,9 +121,21 @@ export const analyzeExcelFile = async (file: File): Promise<{
                 }
               }
               
-              // Special handling for known cells with borders
+              // Apply special styling for known cells
               if (specialCells[cellAddress]) {
-                if (specialCells[cellAddress].hasBottomBorder) {
+                const specialCell = specialCells[cellAddress];
+                
+                // Apply font settings
+                if (specialCell.font) {
+                  cellStyle.font = { ...cellStyle.font, ...specialCell.font };
+                  
+                  // Ensure the style object has the font property
+                  if (!cellStyle.style) cellStyle.style = {};
+                  cellStyle.style.font = { ...cellStyle.style.font, ...specialCell.font };
+                }
+                
+                // Apply border settings
+                if (specialCell.hasBottomBorder) {
                   cellStyle.borders.bottom = true;
                   
                   // Ensure the style object has the border property
@@ -114,9 +145,38 @@ export const analyzeExcelFile = async (file: File): Promise<{
                   
                   // Set the bottom border style with stronger properties
                   cellStyle.style.border.bottom = {
-                    style: 'medium', // Changed from 'thin' to 'medium' for better visibility
+                    style: 'medium',
                     color: { rgb: "000000" }
                   };
+                }
+                
+                // Apply thick borders if specified
+                if (specialCell.border) {
+                  // Ensure the style object has the border property
+                  if (!cellStyle.style.border) {
+                    cellStyle.style.border = {};
+                  }
+                  
+                  // Apply each border side
+                  if (specialCell.border.top) {
+                    cellStyle.borders.top = true;
+                    cellStyle.style.border.top = specialCell.border.top;
+                  }
+                  
+                  if (specialCell.border.right) {
+                    cellStyle.borders.right = true;
+                    cellStyle.style.border.right = specialCell.border.right;
+                  }
+                  
+                  if (specialCell.border.bottom) {
+                    cellStyle.borders.bottom = true;
+                    cellStyle.style.border.bottom = specialCell.border.bottom;
+                  }
+                  
+                  if (specialCell.border.left) {
+                    cellStyle.borders.left = true;
+                    cellStyle.style.border.left = specialCell.border.left;
+                  }
                 }
               }
               
@@ -125,9 +185,11 @@ export const analyzeExcelFile = async (file: File): Promise<{
           }
         }
         
-        // Debug output for A3 cell
-        const a3Cell = styleCells.find(cell => cell.address === 'A3');
-        console.log("Enhanced A3 cell style:", a3Cell);
+        // Debug output for special cells
+        for (const cellAddr of Object.keys(specialCells)) {
+          const cell = styleCells.find(cell => cell.address === cellAddr);
+          console.log(`Enhanced ${cellAddr} cell style:`, cell);
+        }
         
         // Log some cells with font styles for debugging
         const cellsWithFonts = styleCells.filter(cell => cell.font);
@@ -353,6 +415,43 @@ export const modifyAndDownloadExcel = async (
         // Debug column widths
         console.log("Original column widths before modification:", originalColWidths);
         
+        // Special cells that need specific styling
+        const specialCells = {
+          'BF4': {
+            font: {
+              name: 'Arial',
+              size: 9
+            }
+          },
+          'BM4': {
+            border: {
+              top: { style: 'thick', color: { argb: 'FF000000' } },
+              left: { style: 'thick', color: { argb: 'FF000000' } },
+              bottom: { style: 'thick', color: { argb: 'FF000000' } },
+              right: { style: 'thick', color: { argb: 'FF000000' } }
+            }
+          },
+          'BM5': {
+            border: {
+              top: { style: 'thick', color: { argb: 'FF000000' } },
+              left: { style: 'thick', color: { argb: 'FF000000' } },
+              bottom: { style: 'thick', color: { argb: 'FF000000' } },
+              right: { style: 'thick', color: { argb: 'FF000000' } }
+            }
+          },
+          'BJ6': {
+            font: {
+              name: 'Arial',
+              size: 9
+            }
+          },
+          'A3': {
+            border: {
+              bottom: { style: 'medium', color: { argb: 'FF000000' } }
+            }
+          }
+        };
+        
         // Apply all cell styles from original document to preserve formatting
         cellStyles.forEach(cellStyle => {
           const cell = worksheet[cellStyle.address];
@@ -437,67 +536,45 @@ export const modifyAndDownloadExcel = async (
           }
         });
         
-        // Special attention to cell A3
-        if (worksheet['A3']) {
-          console.log("Checking cell A3 before saving:", worksheet['A3']);
-          // Ensure the bottom border is preserved with stronger properties
-          if (!worksheet['A3'].s) {
-            worksheet['A3'].s = {};
+        // Apply special styling to specific cells
+        Object.entries(specialCells).forEach(([cellAddress, style]) => {
+          if (worksheet[cellAddress]) {
+            console.log(`Applying special style to ${cellAddress}:`, style);
+            
+            if (!worksheet[cellAddress].s) {
+              worksheet[cellAddress].s = {};
+            }
+            
+            // Apply font settings
+            if (style.font) {
+              if (!worksheet[cellAddress].s.font) {
+                worksheet[cellAddress].s.font = {};
+              }
+              
+              worksheet[cellAddress].s.font = {
+                ...worksheet[cellAddress].s.font,
+                ...style.font
+              };
+              
+              console.log(`Applied font to ${cellAddress}:`, worksheet[cellAddress].s.font);
+            }
+            
+            // Apply border settings
+            if (style.border) {
+              if (!worksheet[cellAddress].s.border) {
+                worksheet[cellAddress].s.border = {};
+              }
+              
+              Object.entries(style.border).forEach(([side, borderStyle]) => {
+                worksheet[cellAddress].s.border[side] = borderStyle;
+              });
+              
+              console.log(`Applied borders to ${cellAddress}:`, worksheet[cellAddress].s.border);
+            }
+          } else {
+            console.log(`Cell ${cellAddress} not found in worksheet`);
           }
-          
-          if (!worksheet['A3'].s.border) {
-            worksheet['A3'].s.border = {};
-          }
-          
-          // Always add a bottom border to A3 with stronger properties
-          worksheet['A3'].s.border.bottom = { 
-            style: 'medium', // Changed from 'thin' to 'medium' for better visibility
-            color: { rgb: "000000" } 
-          };
-          
-          console.log("A3 cell after modification:", worksheet['A3']);
-        }
-        
-        // Special attention to cell BM4 - thick border
-        if (worksheet['BM4']) {
-          console.log("Checking cell BM4 before saving:", worksheet['BM4']);
-          
-          if (!worksheet['BM4'].s) {
-            worksheet['BM4'].s = {};
-          }
-          
-          if (!worksheet['BM4'].s.border) {
-            worksheet['BM4'].s.border = {};
-          }
-          
-          // Set all borders to thin
-          worksheet['BM4'].s.border = {
-            top: { style: 'thin', color: { rgb: "000000" } },
-            right: { style: 'thin', color: { rgb: "000000" } },
-            bottom: { style: 'thin', color: { rgb: "000000" } },
-            left: { style: 'thin', color: { rgb: "000000" } }
-          };
-          
-          console.log("BM4 cell after modification:", worksheet['BM4']);
-        }
-        
-        // Special attention to cell BM5 - thick border all around
-        if (worksheet['BM5']) {
-          console.log("Checking cell BM5 before saving:", worksheet['BM5']);
-          
-          if (!worksheet['BM5'].s) {
-            worksheet['BM5'].s = {};
-          }
-          
-          worksheet['BM5'].s.border = {
-            top: { style: 'thick', color: { rgb: "000000" } },
-            right: { style: 'thick', color: { rgb: "000000" } },
-            bottom: { style: 'thick', color: { rgb: "000000" } },
-            left: { style: 'thick', color: { rgb: "000000" } }
-          };
-          
-          console.log("BM5 cell after modification:", worksheet['BM5']);
-        }
+        });
         
         // Get all properties of cell AD18
         const cellAddress = "AD18";

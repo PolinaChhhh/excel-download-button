@@ -50,6 +50,11 @@ const UploadSection: React.FC<UploadSectionProps> = ({
           <p className="text-sm text-green-600 mb-3">
             ✓ Данные загружены и ячейка AD18 будет заполнена значением "{customCellText}".
           </p>
+          <p className="text-xs text-gray-600 mb-3">
+            При экспорте будут применены следующие стили:
+            <br />• Шрифт Arial, размер 9 для ячеек BF4, BJ6
+            <br />• Толстые границы для ячеек BM4, BM5
+          </p>
           <ModifiedExcelDownloader 
             data={invoiceData} 
             originalFile={originalFile}
