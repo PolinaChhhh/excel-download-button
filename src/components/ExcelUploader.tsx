@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 
 interface ExcelUploaderProps {
   onFileUploaded: (data: any, originalFile: File) => void;
@@ -69,15 +69,39 @@ const ExcelUploader: React.FC<ExcelUploaderProps> = ({ onFileUploaded, className
       
       reader.onload = async (e) => {
         try {
-          const data = e.target?.result;
-          const workbook = XLSX.read(data, { type: 'binary' });
+          const arrayBuffer = e.target?.result as ArrayBuffer;
+          
+          // Use ExcelJS to parse the file
+          const workbook = new ExcelJS.Workbook();
+          await workbook.xlsx.load(arrayBuffer);
           
           // Get first worksheet
-          const wsname = workbook.SheetNames[0];
-          const ws = workbook.Sheets[wsname];
+          const worksheet = workbook.worksheets[0];
+          
+          if (!worksheet) {
+            throw new Error("No worksheet found in the Excel file");
+          }
           
           // Convert worksheet to JSON
-          const jsonData = XLSX.utils.sheet_to_json(ws);
+          const jsonData: any[] = [];
+          
+          // Read headers from the first row
+          const headers: string[] = [];
+          worksheet.getRow(1).eachCell((cell, colNumber) => {
+            headers[colNumber - 1] = cell.value?.toString() || `Column${colNumber}`;
+          });
+          
+          // Read data rows
+          worksheet.eachRow((row, rowNumber) => {
+            if (rowNumber > 1) { // Skip header row
+              const rowData: Record<string, any> = {};
+              row.eachCell((cell, colNumber) => {
+                const header = headers[colNumber - 1];
+                rowData[header] = cell.value;
+              });
+              jsonData.push(rowData);
+            }
+          });
           
           // Pass both the data and original file to the parent component
           onFileUploaded({ items: jsonData }, file);
@@ -96,7 +120,7 @@ const ExcelUploader: React.FC<ExcelUploaderProps> = ({ onFileUploaded, className
         setIsUploading(false);
       };
       
-      reader.readAsBinaryString(file);
+      reader.readAsArrayBuffer(file);
     } catch (error) {
       console.error('Error uploading file:', error);
       toast.error('Failed to upload file');

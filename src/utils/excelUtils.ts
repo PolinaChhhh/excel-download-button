@@ -1,193 +1,176 @@
-import * as XLSX from 'xlsx';
-import type { CellStyle, ValidationSummary, CellValidationResult } from '@/types/excel';
+
+import ExcelJS from 'exceljs';
+import type { CellStyle, ValidationSummary, CellValidationResult, MergedCellInfo } from '@/types/excel';
 
 export const analyzeExcelFile = async (file: File): Promise<{ 
   cellStyles: CellStyle[], 
-  workbook: any, 
-  worksheet: any,
+  workbook: ExcelJS.Workbook, 
+  worksheet: ExcelJS.Worksheet,
   cellContents: Record<string, any>,
-  mergedCells: any[]
+  mergedCells: MergedCellInfo[]
 }> => {
   return new Promise((resolve, reject) => {
     const fileReader = new FileReader();
     
-    fileReader.onload = (e) => {
+    fileReader.onload = async (e) => {
       try {
         const arrayBuffer = e.target?.result as ArrayBuffer;
         
-        // Convert to binary string for better compatibility
-        const data = new Uint8Array(arrayBuffer);
-        const arr = new Array();
-        for (let i = 0; i < data.length; i++) {
-          arr[i] = String.fromCharCode(data[i]);
-        }
-        const bstr = arr.join("");
-        
-        // Parse Excel file with maximum formatting preservation
-        const workbook = XLSX.read(bstr, { 
-          type: 'binary',
-          cellStyles: true,
-          cellDates: true,
-          cellNF: true,
-          cellFormula: true,
-          bookVBA: true,
-          WTF: true
-        });
+        // Create a new workbook
+        const workbook = new ExcelJS.Workbook();
+        await workbook.xlsx.load(arrayBuffer);
         
         // Get the first worksheet
-        const wsName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[wsName];
+        const worksheet = workbook.worksheets[0];
+        if (!worksheet) {
+          throw new Error("No worksheet found in Excel file");
+        }
         
         // Store column widths for debugging and verification
-        if (worksheet['!cols']) {
-          console.log("Original column widths from file:", worksheet['!cols']);
-        } else {
-          console.log("No column widths found in original file");
-        }
-
+        console.log("Original column widths from file:", worksheet.columns);
+        
         // Get merged cells information
-        const mergedCells = worksheet['!merges'] || [];
+        const mergedCells: MergedCellInfo[] = [];
+        worksheet.mergeCells.forEach(mergeRange => {
+          // Exceljs provides merged cell ranges in the format of 'A1:B2'
+          const [startCell, endCell] = mergeRange.split(':');
+          
+          // Convert cell references to row and column numbers
+          const startCellRef = worksheet.getCell(startCell);
+          const endCellRef = worksheet.getCell(endCell);
+          
+          mergedCells.push({
+            startCell,
+            endCell,
+            startRow: startCellRef.row,
+            startCol: startCellRef.col,
+            endRow: endCellRef.row,
+            endCol: endCellRef.col
+          });
+        });
+        
         console.log("Merged cells information:", mergedCells);
         
         // Analyze cell styles and contents
         const styleCells: CellStyle[] = [];
         const cellContents: Record<string, any> = {};
-        const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1:Z100');
         
         // Special cells with specific styling requirements
         const specialCells: Record<string, any> = {
           'BF4': { font: { name: 'Arial', size: 9 } },
           'BM4': { 
             border: {
-              top: { style: 'thick', color: { rgb: "000000" } },
-              left: { style: 'thick', color: { rgb: "000000" } },
-              bottom: { style: 'thick', color: { rgb: "000000" } },
-              right: { style: 'thick', color: { rgb: "000000" } }
+              top: { style: 'thick', color: { argb: "FF000000" } },
+              left: { style: 'thick', color: { argb: "FF000000" } },
+              bottom: { style: 'thick', color: { argb: "FF000000" } },
+              right: { style: 'thick', color: { argb: "FF000000" } }
             }
           },
           'BM5': { 
             border: {
-              top: { style: 'thick', color: { rgb: "000000" } },
-              left: { style: 'thick', color: { rgb: "000000" } },
-              bottom: { style: 'thick', color: { rgb: "000000" } },
-              right: { style: 'thick', color: { rgb: "000000" } }
+              top: { style: 'thick', color: { argb: "FF000000" } },
+              left: { style: 'thick', color: { argb: "FF000000" } },
+              bottom: { style: 'thick', color: { argb: "FF000000" } },
+              right: { style: 'thick', color: { argb: "FF000000" } }
             }
           },
           'BJ6': { font: { name: 'Arial', size: 9 } },
           'A3': { hasBottomBorder: true }
         };
         
-        for (let r = range.s.r; r <= range.e.r; r++) {
-          for (let c = range.s.c; c <= range.e.c; c++) {
-            const cellAddress = XLSX.utils.encode_cell({r: r, c: c});
-            const cell = worksheet[cellAddress];
+        // Process all cells in the worksheet
+        worksheet.eachRow((row, rowNumber) => {
+          row.eachCell((cell, colNumber) => {
+            const cellAddress = cell.address;
             
-            if (cell) {
-              // Store cell content
-              cellContents[cellAddress] = {
-                value: cell.v,
-                type: cell.t,
-                formula: cell.f,
-                formattedValue: cell.w
+            // Store cell content
+            cellContents[cellAddress] = {
+              value: cell.value,
+              type: cell.type,
+              formula: cell.formula,
+              formattedValue: cell.text
+            };
+            
+            // Handle cell style
+            let cellStyle: CellStyle = {
+              address: cellAddress,
+              style: {},
+              borders: {
+                top: false,
+                right: false,
+                bottom: false,
+                left: false
+              },
+              value: cell.value
+            };
+            
+            // Extract border information
+            if (cell.border) {
+              cellStyle.borders = {
+                top: !!cell.border.top,
+                right: !!cell.border.right,
+                bottom: !!cell.border.bottom,
+                left: !!cell.border.left
               };
-              
-              // Handle cell style
-              let cellStyle: CellStyle = {
-                address: cellAddress,
-                style: cell.s || {},
-                borders: {
-                  top: false,
-                  right: false,
-                  bottom: false,
-                  left: false
-                },
-                value: cell.v
-              };
-              
-              // Extract border information if available
-              if (cell.s && cell.s.border) {
-                cellStyle.borders = {
-                  top: cell.s.border.top?.style !== undefined,
-                  right: cell.s.border.right?.style !== undefined,
-                  bottom: cell.s.border.bottom?.style !== undefined,
-                  left: cell.s.border.left?.style !== undefined
-                };
-              }
-              
-              // Store font and fill information with full details
-              if (cell.s) {
-                cellStyle.font = cell.s.font;
-                cellStyle.fill = cell.s.fill;
-                
-                // Log font details for debugging
-                if (cell.s.font) {
-                  console.log(`Cell ${cellAddress} font:`, JSON.stringify(cell.s.font));
-                }
-              }
-              
-              // Apply special styling for known cells
-              if (specialCells[cellAddress]) {
-                const specialCell = specialCells[cellAddress];
-                
-                // Apply font settings
-                if (specialCell.font) {
-                  cellStyle.font = { ...cellStyle.font, ...specialCell.font };
-                  
-                  // Ensure the style object has the font property
-                  if (!cellStyle.style) cellStyle.style = {};
-                  cellStyle.style.font = { ...cellStyle.style.font, ...specialCell.font };
-                }
-                
-                // Apply border settings
-                if (specialCell.hasBottomBorder) {
-                  cellStyle.borders.bottom = true;
-                  
-                  // Ensure the style object has the border property
-                  if (!cellStyle.style.border) {
-                    cellStyle.style.border = {};
-                  }
-                  
-                  // Set the bottom border style with stronger properties
-                  cellStyle.style.border.bottom = {
-                    style: 'medium',
-                    color: { rgb: "000000" }
-                  };
-                }
-                
-                // Apply thick borders if specified
-                if (specialCell.border) {
-                  // Ensure the style object has the border property
-                  if (!cellStyle.style.border) {
-                    cellStyle.style.border = {};
-                  }
-                  
-                  // Apply each border side
-                  if (specialCell.border.top) {
-                    cellStyle.borders.top = true;
-                    cellStyle.style.border.top = specialCell.border.top;
-                  }
-                  
-                  if (specialCell.border.right) {
-                    cellStyle.borders.right = true;
-                    cellStyle.style.border.right = specialCell.border.right;
-                  }
-                  
-                  if (specialCell.border.bottom) {
-                    cellStyle.borders.bottom = true;
-                    cellStyle.style.border.bottom = specialCell.border.bottom;
-                  }
-                  
-                  if (specialCell.border.left) {
-                    cellStyle.borders.left = true;
-                    cellStyle.style.border.left = specialCell.border.left;
-                  }
-                }
-              }
-              
-              styleCells.push(cellStyle);
             }
-          }
-        }
+            
+            // Store font and fill information
+            if (cell.font) {
+              cellStyle.font = {
+                name: cell.font.name,
+                size: cell.font.size,
+                bold: cell.font.bold,
+                italic: cell.font.italic,
+                underline: cell.font.underline,
+                color: cell.font.color ? cell.font.color.argb : undefined
+              };
+              
+              // Log font details for debugging
+              console.log(`Cell ${cellAddress} font:`, JSON.stringify(cellStyle.font));
+            }
+            
+            if (cell.fill) {
+              cellStyle.fill = cell.fill;
+            }
+            
+            // Apply special styling for known cells
+            if (specialCells[cellAddress]) {
+              const specialCell = specialCells[cellAddress];
+              
+              // Apply font settings
+              if (specialCell.font) {
+                cellStyle.font = { ...cellStyle.font, ...specialCell.font };
+              }
+              
+              // Apply bottom border if specified
+              if (specialCell.hasBottomBorder) {
+                cellStyle.borders.bottom = true;
+              }
+              
+              // Apply thick borders if specified
+              if (specialCell.border) {
+                // Apply each border side
+                if (specialCell.border.top) {
+                  cellStyle.borders.top = true;
+                }
+                
+                if (specialCell.border.right) {
+                  cellStyle.borders.right = true;
+                }
+                
+                if (specialCell.border.bottom) {
+                  cellStyle.borders.bottom = true;
+                }
+                
+                if (specialCell.border.left) {
+                  cellStyle.borders.left = true;
+                }
+              }
+            }
+            
+            styleCells.push(cellStyle);
+          });
+        });
         
         // Debug output for special cells
         for (const cellAddr of Object.keys(specialCells)) {
@@ -299,50 +282,40 @@ export const validateCellStyles = async (file: File, originalStyles: CellStyle[]
             }
             
             // Check font with each property individually
-            if (originalCell.font) {
-              const currentFont = currentCell.font || {};
-              const originalFont = originalCell.font;
-              
+            if (originalCell.font && currentCell.font) {
               // Check font size
-              if (currentFont.sz !== originalFont.sz) {
+              if (currentCell.font.size !== originalCell.font.size) {
                 result.isValid = false;
                 result.issues = result.issues || [];
                 result.issues.push('Font size mismatch');
               }
               
               // Check font name
-              if (currentFont.name !== originalFont.name) {
+              if (currentCell.font.name !== originalCell.font.name) {
                 result.isValid = false;
                 result.issues = result.issues || [];
                 result.issues.push('Font name mismatch');
               }
               
               // Check bold
-              if (currentFont.bold !== originalFont.bold) {
+              if (currentCell.font.bold !== originalCell.font.bold) {
                 result.isValid = false;
                 result.issues = result.issues || [];
                 result.issues.push('Font bold mismatch');
               }
               
               // Check italic
-              if (currentFont.italic !== originalFont.italic) {
+              if (currentCell.font.italic !== originalCell.font.italic) {
                 result.isValid = false;
                 result.issues = result.issues || [];
                 result.issues.push('Font italic mismatch');
               }
               
               // Check underline
-              if (currentFont.underline !== originalFont.underline) {
+              if (currentCell.font.underline !== originalCell.font.underline) {
                 result.isValid = false;
                 result.issues = result.issues || [];
                 result.issues.push('Font underline mismatch');
-              }
-              
-              // Check color
-              if (JSON.stringify(currentFont.color) !== JSON.stringify(originalFont.color)) {
-                result.isValid = false;
-                result.issues = result.issues || [];
-                result.issues.push('Font color mismatch');
               }
             }
             
@@ -396,175 +369,96 @@ export const modifyAndDownloadExcel = async (
       try {
         const arrayBuffer = e.target?.result as ArrayBuffer;
         
-        // Convert to binary string for better compatibility
-        const data = new Uint8Array(arrayBuffer);
-        const arr = new Array();
-        for (let i = 0; i < data.length; i++) {
-          arr[i] = String.fromCharCode(data[i]);
-        }
-        const bstr = arr.join("");
-        
-        // Parse the Excel file with maximum formatting preservation
-        const workbook = XLSX.read(bstr, { 
-          type: 'binary',
-          cellStyles: true,
-          cellDates: true,
-          cellNF: true,
-          cellFormula: true,
-          bookVBA: true,
-          WTF: true
-        });
+        // Create a new workbook
+        const workbook = new ExcelJS.Workbook();
+        await workbook.xlsx.load(arrayBuffer);
         
         // Get the first worksheet
-        const wsName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[wsName];
+        const worksheet = workbook.worksheets[0];
+        if (!worksheet) {
+          throw new Error("No worksheet found in Excel file");
+        }
         
-        // Store original column widths
-        const originalColWidths = worksheet['!cols'] || [];
-        
-        // Debug column widths
-        console.log("Original column widths before modification:", originalColWidths);
-        
-        // Get merged cell ranges
-        const mergedCells = worksheet['!merges'] || [];
-        console.log("Merged cells before modification:", mergedCells);
-        
-        // Find BM4:BS4 merged region
-        const bmRegion = mergedCells.find((merge: any) => {
-          const startCell = XLSX.utils.encode_cell({r: merge.s.r, c: merge.s.c});
-          return startCell === 'BM4';
-        });
-        
-        // Find BM5:BS5 merged region
-        const bm5Region = mergedCells.find((merge: any) => {
-          const startCell = XLSX.utils.encode_cell({r: merge.s.r, c: merge.s.c});
-          return startCell === 'BM5';
-        });
+        // Store original column widths and merged cells
+        console.log("Original column widths before modification:", worksheet.columns);
+        console.log("Merged cells before modification:", worksheet.mergeCells);
         
         // 1. Set the custom cell text (AD18)
-        if (!worksheet['AD18']) {
-          worksheet['AD18'] = { t: 's', v: '' };
-        }
-        worksheet['AD18'].v = customCellText;
-        worksheet['AD18'].t = 's';
+        const ad18Cell = worksheet.getCell('AD18');
+        ad18Cell.value = customCellText;
         
         // 2. Apply Arial size 9 font to BF4
-        ensureCellExists(worksheet, 'BF4');
-        if (!worksheet['BF4'].s) worksheet['BF4'].s = {};
-        worksheet['BF4'].s.font = {
+        const bf4Cell = worksheet.getCell('BF4');
+        bf4Cell.font = {
           name: 'Arial',
-          sz: 9,
-          color: { rgb: "000000" }
+          size: 9,
+          color: { argb: 'FF000000' }
         };
-        console.log("Explicitly set BF4 font:", worksheet['BF4'].s.font);
+        console.log("Explicitly set BF4 font:", bf4Cell.font);
         
         // 3. Apply Arial size 9 font to BJ6
-        ensureCellExists(worksheet, 'BJ6');
-        if (!worksheet['BJ6'].s) worksheet['BJ6'].s = {};
-        worksheet['BJ6'].s.font = {
+        const bj6Cell = worksheet.getCell('BJ6');
+        bj6Cell.font = {
           name: 'Arial',
-          sz: 9,
-          color: { rgb: "000000" }
+          size: 9,
+          color: { argb: 'FF000000' }
         };
-        console.log("Explicitly set BJ6 font:", worksheet['BJ6'].s.font);
+        console.log("Explicitly set BJ6 font:", bj6Cell.font);
         
-        // 4. Apply thick borders to BM:BS merged range - Row 4
-        if (bmRegion) {
-          const startCol = bmRegion.s.c;
-          const endCol = bmRegion.e.c;
-          const row = bmRegion.s.r;
-          
-          console.log(`Setting borders for merged range BM4:BS4 from column ${startCol} to ${endCol} at row ${row}`);
-          
-          // Apply to all cells in the merged range
-          for (let col = startCol; col <= endCol; col++) {
-            const cellAddress = XLSX.utils.encode_cell({r: row, c: col});
-            ensureCellExists(worksheet, cellAddress);
-            if (!worksheet[cellAddress].s) worksheet[cellAddress].s = {};
+        // 4. Apply thick borders to BM4:BS4 merged range
+        const applyThickBordersToRange = (startCell: string, endCell: string) => {
+          const range = worksheet.getCell(startCell).full;
+          if (range) {
+            // Check if the range is already merged
+            const isMerged = worksheet.mergeCells.includes(`${startCell}:${endCell}`);
             
-            // Apply borders based on cell position in merged range
-            worksheet[cellAddress].s.border = {
-              top: { style: 'thick', color: { rgb: "000000" } },
-              bottom: { style: 'thick', color: { rgb: "000000" } }
-            };
-            
-            // Left border only for the leftmost cell
-            if (col === startCol) {
-              worksheet[cellAddress].s.border.left = { style: 'thick', color: { rgb: "000000" } };
+            if (!isMerged) {
+              // Merge the range if not already merged
+              worksheet.mergeCells(`${startCell}:${endCell}`);
             }
             
-            // Right border only for the rightmost cell
-            if (col === endCol) {
-              worksheet[cellAddress].s.border.right = { style: 'thick', color: { rgb: "000000" } };
+            // Apply borders to all cells in the merged range
+            const startAddress = worksheet.getCell(startCell);
+            const endAddress = worksheet.getCell(endCell);
+            
+            for (let row = startAddress.row; row <= endAddress.row; row++) {
+              for (let col = startAddress.col; col <= endAddress.col; col++) {
+                const cell = worksheet.getCell(row, col);
+                
+                // Set border styles based on position in the range
+                cell.border = {
+                  top: { style: 'thick', color: { argb: 'FF000000' } },
+                  bottom: { style: 'thick', color: { argb: 'FF000000' } }
+                };
+                
+                // Left border only for leftmost cells
+                if (col === startAddress.col) {
+                  cell.border.left = { style: 'thick', color: { argb: 'FF000000' } };
+                }
+                
+                // Right border only for rightmost cells
+                if (col === endAddress.col) {
+                  cell.border.right = { style: 'thick', color: { argb: 'FF000000' } };
+                }
+              }
             }
             
-            console.log(`Applied borders to ${cellAddress} in BM4:BS4 merged range`);
+            console.log(`Applied borders to range ${startCell}:${endCell}`);
           }
-        } else {
-          // Fallback if merges not detected: apply to BM4 directly
-          ensureCellExists(worksheet, 'BM4');
-          if (!worksheet['BM4'].s) worksheet['BM4'].s = {};
-          worksheet['BM4'].s.border = {
-            top: { style: 'thick', color: { rgb: "000000" } },
-            left: { style: 'thick', color: { rgb: "000000" } },
-            bottom: { style: 'thick', color: { rgb: "000000" } },
-            right: { style: 'thick', color: { rgb: "000000" } }
-          };
-          console.log("Fallback: Explicitly set BM4 borders:", worksheet['BM4'].s.border);
-        }
+        };
         
-        // 5. Apply thick borders to BM:BS merged range - Row 5
-        if (bm5Region) {
-          const startCol = bm5Region.s.c;
-          const endCol = bm5Region.e.c;
-          const row = bm5Region.s.r;
-          
-          console.log(`Setting borders for merged range BM5:BS5 from column ${startCol} to ${endCol} at row ${row}`);
-          
-          // Apply to all cells in the merged range
-          for (let col = startCol; col <= endCol; col++) {
-            const cellAddress = XLSX.utils.encode_cell({r: row, c: col});
-            ensureCellExists(worksheet, cellAddress);
-            if (!worksheet[cellAddress].s) worksheet[cellAddress].s = {};
-            
-            // Apply borders based on cell position in merged range
-            worksheet[cellAddress].s.border = {
-              top: { style: 'thick', color: { rgb: "000000" } },
-              bottom: { style: 'thick', color: { rgb: "000000" } }
-            };
-            
-            // Left border only for the leftmost cell
-            if (col === startCol) {
-              worksheet[cellAddress].s.border.left = { style: 'thick', color: { rgb: "000000" } };
-            }
-            
-            // Right border only for the rightmost cell
-            if (col === endCol) {
-              worksheet[cellAddress].s.border.right = { style: 'thick', color: { rgb: "000000" } };
-            }
-            
-            console.log(`Applied borders to ${cellAddress} in BM5:BS5 merged range`);
-          }
-        } else {
-          // Fallback if merges not detected: apply to BM5 directly
-          ensureCellExists(worksheet, 'BM5');
-          if (!worksheet['BM5'].s) worksheet['BM5'].s = {};
-          worksheet['BM5'].s.border = {
-            top: { style: 'thick', color: { rgb: "000000" } },
-            left: { style: 'thick', color: { rgb: "000000" } },
-            bottom: { style: 'thick', color: { rgb: "000000" } },
-            right: { style: 'thick', color: { rgb: "000000" } }
-          };
-          console.log("Fallback: Explicitly set BM5 borders:", worksheet['BM5'].s.border);
-        }
+        // Apply thick borders to BM4:BS4 and BM5:BS5
+        applyThickBordersToRange('BM4', 'BS4');
+        applyThickBordersToRange('BM5', 'BS5');
         
         // 6. Apply bottom border to A3 
-        ensureCellExists(worksheet, 'A3');
-        if (!worksheet['A3'].s) worksheet['A3'].s = {};
-        if (!worksheet['A3'].s.border) worksheet['A3'].s.border = {};
-        worksheet['A3'].s.border.bottom = { style: 'medium', color: { rgb: "000000" } };
+        const a3Cell = worksheet.getCell('A3');
+        if (!a3Cell.border) {
+          a3Cell.border = {};
+        }
+        a3Cell.border.bottom = { style: 'medium', color: { argb: 'FF000000' } };
         
-        // Now preserve all other original formatting/styles from the cell analysis
+        // Apply any other styling from the original cell styles
         cellStyles.forEach(cellStyle => {
           const cellAddress = cellStyle.address;
           
@@ -573,54 +467,55 @@ export const modifyAndDownloadExcel = async (
             return;
           }
           
-          ensureCellExists(worksheet, cellAddress);
+          const cell = worksheet.getCell(cellAddress);
           
-          // Apply the original style if it exists
-          if (cellStyle.style) {
-            if (!worksheet[cellAddress].s) worksheet[cellAddress].s = {};
+          // Apply borders if needed
+          if (cellStyle.borders) {
+            if (!cell.border) {
+              cell.border = {};
+            }
             
-            // Copy style properties while preserving what's already been set
-            Object.assign(worksheet[cellAddress].s, cellStyle.style);
+            if (cellStyle.borders.top) {
+              cell.border.top = { style: 'thin', color: { argb: 'FF000000' } };
+            }
+            
+            if (cellStyle.borders.right) {
+              cell.border.right = { style: 'thin', color: { argb: 'FF000000' } };
+            }
+            
+            if (cellStyle.borders.bottom) {
+              cell.border.bottom = { style: 'thin', color: { argb: 'FF000000' } };
+            }
+            
+            if (cellStyle.borders.left) {
+              cell.border.left = { style: 'thin', color: { argb: 'FF000000' } };
+            }
+          }
+          
+          // Apply font if needed
+          if (cellStyle.font) {
+            cell.font = {
+              ...cell.font,
+              name: cellStyle.font.name || cell.font?.name,
+              size: cellStyle.font.size || cell.font?.size,
+              bold: cellStyle.font.bold !== undefined ? cellStyle.font.bold : cell.font?.bold,
+              italic: cellStyle.font.italic !== undefined ? cellStyle.font.italic : cell.font?.italic,
+              underline: cellStyle.font.underline !== undefined ? cellStyle.font.underline : cell.font?.underline,
+              color: cellStyle.font.color ? { argb: cellStyle.font.color } : cell.font?.color
+            };
+          }
+          
+          // Apply fill if needed
+          if (cellStyle.fill) {
+            cell.fill = cellStyle.fill;
           }
         });
         
-        // Ensure column widths are preserved
-        if (worksheet['!cols']) {
-          worksheet['!cols'].forEach((col: any) => {
-            if (col) {
-              if (col.wch && !col.wpx) {
-                col.wpx = Math.round(col.wch * 7);
-              }
-              col.hidden = false;
-            }
-          });
-        }
-        
-        // Add dimension property if needed
-        if (worksheet['!ref']) {
-          worksheet['!dimensions'] = worksheet['!ref'];
-        }
-        
-        // Write the workbook with explicit style instructions
-        const wbout = XLSX.write(workbook, { 
-          bookType: 'xlsx', 
-          type: 'binary',
-          cellStyles: true,
-          bookSST: false,
-          compression: true,
-        });
+        // Write to a buffer
+        const buffer = await workbook.xlsx.writeBuffer();
         
         // Convert to blob and download
-        const s2ab = (s: string) => {
-          const buf = new ArrayBuffer(s.length);
-          const view = new Uint8Array(buf);
-          for (let i = 0; i < s.length; i++) {
-            view[i] = s.charCodeAt(i) & 0xFF;
-          }
-          return buf;
-        };
-        
-        const blob = new Blob([s2ab(wbout)], { 
+        const blob = new Blob([buffer], { 
           type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" 
         });
         
@@ -647,11 +542,6 @@ export const modifyAndDownloadExcel = async (
 };
 
 // Helper function to ensure a cell exists in the worksheet
-function ensureCellExists(worksheet: any, cellAddress: string): void {
-  if (!worksheet[cellAddress]) {
-    worksheet[cellAddress] = {
-      t: 's',  // string type
-      v: '',   // empty value
-    };
-  }
+function ensureCellExists(worksheet: ExcelJS.Worksheet, cellAddress: string): ExcelJS.Cell {
+  return worksheet.getCell(cellAddress);
 }

@@ -1,6 +1,4 @@
-
 import React, { useState } from 'react';
-import * as XLSX from 'xlsx'; // Add this import
 import { toast } from 'sonner';
 import { analyzeExcelFile, modifyAndDownloadExcel, validateCellStyles } from '@/utils/excelUtils';
 import AnalyzeButton from '@/components/excel/AnalyzeButton';
@@ -55,9 +53,7 @@ const ModifiedExcelDownloader: React.FC<ExcelDownloaderProps> = ({
       if (merges && merges.length > 0) {
         console.log("Найдены объединенные ячейки:", merges.length);
         merges.forEach((merge, index) => {
-          const startCell = XLSX.utils.encode_cell({r: merge.s.r, c: merge.s.c});
-          const endCell = XLSX.utils.encode_cell({r: merge.e.r, c: merge.e.c});
-          console.log(`Объединение #${index + 1}: ${startCell}:${endCell}`);
+          console.log(`Объединение #${index + 1}: ${merge.startCell}:${merge.endCell}`);
         });
       }
       
