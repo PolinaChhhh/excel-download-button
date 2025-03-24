@@ -61,8 +61,9 @@ export function applyArialFont(worksheet: ExcelJS.Worksheet, cellAddress: string
     const end = worksheet.getCell(endCell);
     
     // Apply font to all cells in the merged range
-    for (let row = start.row; row <= end.row; row++) {
-      for (let col = start.col; col <= end.col; col++) {
+    // Convert row and col to numbers explicitly to fix the type error
+    for (let row = Number(start.row); row <= Number(end.row); row++) {
+      for (let col = Number(start.col); col <= Number(end.col); col++) {
         const rangeCell = worksheet.getCell(row, col);
         rangeCell.font = {
           name: 'Arial',
