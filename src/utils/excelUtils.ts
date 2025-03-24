@@ -438,7 +438,8 @@ export const modifyAndDownloadExcel = async (
               if (col.wch && !col.wpx) {
                 col.wpx = Math.round(col.wch * 7); // Approximate conversion
               }
-              col.customWidth = 1; // Mark as custom width
+              
+              // Remove customWidth as it's not in the ColInfo type
               col.hidden = false; // Ensure column is visible
             }
           });
@@ -461,8 +462,7 @@ export const modifyAndDownloadExcel = async (
           bookSST: false,
           compression: true,
           Props: {
-            Application: "Microsoft Excel", // Pretend to be Excel for better compatibility
-            AppVersion: "16.0300",
+            // Remove 'Application' and 'AppVersion' as they're not in the Properties type
           }
         });
         

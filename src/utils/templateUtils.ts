@@ -1,4 +1,3 @@
-
 import * as XLSX from 'xlsx';
 
 export interface RowSetting {
@@ -217,7 +216,7 @@ export const generateTemplateExcel = (
     worksheet['!cols'][colIndex] = { 
       wpx: Math.round(colSetting.width * 10 * 7), // Adjusted multiplier for better precision
       width: colSetting.width, // Store original width for reference
-      customWidth: 1 // Flag as custom width
+      hidden: false // Mark column as visible
     };
   });
   
@@ -306,9 +305,9 @@ export const generateTemplateExcel = (
     cellStyles: true,
     bookSST: false,
     compression: true,
+    // Remove the 'Application' and 'AppVersion' props as they're not in the Properties type
     Props: {
-      Application: "Microsoft Excel", // Pretend to be Excel for better compatibility
-      AppVersion: "16.0300",
+      // Remove invalid properties
     }
   });
   
