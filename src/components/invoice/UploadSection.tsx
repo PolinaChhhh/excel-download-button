@@ -47,8 +47,11 @@ const UploadSection: React.FC<UploadSectionProps> = ({
       
       {isDataLoaded && (
         <div className="mt-3">
-          <p className="text-sm text-green-600 mb-3">
+          <p className="text-sm text-green-600 mb-1">
             ✓ Данные загружены и ячейка AD18 будет заполнена значением "{customCellText}".
+          </p>
+          <p className="text-sm text-gray-600 mb-3">
+            Все шрифты (Arial, 9pt), границы и стили оформления будут сохранены.
           </p>
           <ModifiedExcelDownloader 
             data={invoiceData} 
@@ -64,6 +67,9 @@ const UploadSection: React.FC<UploadSectionProps> = ({
       <div className="mt-4">
         <h3 className="text-md font-medium mb-3">Шаблон формы ТОРГ-12</h3>
         <TemplateDownloader className="w-full" />
+        <p className="text-xs text-gray-600 mt-2">
+          Шаблон создается с правильными шрифтами (Arial, 9pt) и границами ячеек.
+        </p>
       </div>
     </div>
   );

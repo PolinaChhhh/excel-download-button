@@ -1,3 +1,4 @@
+
 import * as XLSX from 'xlsx';
 import type { CellStyle, ValidationSummary, CellValidationResult } from '@/types/excel';
 
@@ -49,9 +50,35 @@ export const analyzeExcelFile = async (file: File): Promise<{
         const cellContents: Record<string, any> = {};
         const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1:Z100');
         
-        // Special handling for A3 which we know has a bottom border
+        // Special handling for specific cells with known styles
         const specialCells = {
-          'A3': { hasBottomBorder: true }
+          'A3': { hasBottomBorder: true },
+          'BF4': { 
+            font: { name: "Arial", size: 9 },
+            alignment: { horizontal: "center", vertical: "middle" }
+          },
+          'BM4': { 
+            border: {
+              top: { style: "thin" },
+              right: { style: "thin" },
+              bottom: { style: "thin" },
+              left: { style: "thin" }
+            },
+            font: { name: "Arial", size: 9 },
+            alignment: { horizontal: "center", vertical: "middle" }
+          },
+          'BM5': {
+            border: {
+              top: { style: "thick" },
+              right: { style: "thick" },
+              bottom: { style: "thick" },
+              left: { style: "thick" }
+            }
+          },
+          'BJ6': {
+            font: { name: "Arial", size: 9 },
+            alignment: { horizontal: "center", vertical: "middle" }
+          }
         };
         
         for (let r = range.s.r; r <= range.e.r; r++) {
@@ -68,7 +95,7 @@ export const analyzeExcelFile = async (file: File): Promise<{
                 formattedValue: cell.w
               };
               
-              // Handle cell style
+              // Initialize cell style
               let cellStyle: CellStyle = {
                 address: cellAddress,
                 style: cell.s || {},
@@ -102,21 +129,67 @@ export const analyzeExcelFile = async (file: File): Promise<{
                 }
               }
               
-              // Special handling for known cells with borders
+              // Apply special styles for known cells
               if (specialCells[cellAddress]) {
-                if (specialCells[cellAddress].hasBottomBorder) {
+                const specialCell = specialCells[cellAddress];
+                
+                // Apply border styles
+                if (specialCell.hasBottomBorder) {
                   cellStyle.borders.bottom = true;
-                  
-                  // Ensure the style object has the border property
-                  if (!cellStyle.style.border) {
-                    cellStyle.style.border = {};
-                  }
-                  
-                  // Set the bottom border style with stronger properties
+                  if (!cellStyle.style.border) cellStyle.style.border = {};
                   cellStyle.style.border.bottom = {
-                    style: 'medium', // Changed from 'thin' to 'medium' for better visibility
+                    style: 'medium',
                     color: { rgb: "000000" }
                   };
+                }
+                
+                // Apply border styles from special cells config
+                if (specialCell.border) {
+                  if (!cellStyle.style.border) cellStyle.style.border = {};
+                  
+                  if (specialCell.border.top) {
+                    cellStyle.borders.top = true;
+                    cellStyle.style.border.top = specialCell.border.top;
+                  }
+                  
+                  if (specialCell.border.right) {
+                    cellStyle.borders.right = true;
+                    cellStyle.style.border.right = specialCell.border.right;
+                  }
+                  
+                  if (specialCell.border.bottom) {
+                    cellStyle.borders.bottom = true;
+                    cellStyle.style.border.bottom = specialCell.border.bottom;
+                  }
+                  
+                  if (specialCell.border.left) {
+                    cellStyle.borders.left = true;
+                    cellStyle.style.border.left = specialCell.border.left;
+                  }
+                }
+                
+                // Apply font styles
+                if (specialCell.font) {
+                  cellStyle.font = specialCell.font;
+                  if (!cellStyle.style.font) cellStyle.style.font = {};
+                  
+                  if (specialCell.font.name) {
+                    cellStyle.style.font.name = specialCell.font.name;
+                  }
+                  
+                  if (specialCell.font.size !== undefined) {
+                    cellStyle.style.font.sz = specialCell.font.size;
+                  }
+                  
+                  if (specialCell.font.bold !== undefined) {
+                    cellStyle.style.font.bold = specialCell.font.bold;
+                  }
+                }
+                
+                // Apply alignment
+                if (specialCell.alignment) {
+                  if (!cellStyle.style.alignment) cellStyle.style.alignment = {};
+                  cellStyle.style.alignment = specialCell.alignment;
                 }
               }
               
@@ -125,16 +198,10 @@ export const analyzeExcelFile = async (file: File): Promise<{
           }
         }
         
-        // Debug output for A3 cell
-        const a3Cell = styleCells.find(cell => cell.address === 'A3');
-        console.log("Enhanced A3 cell style:", a3Cell);
-        
-        // Log some cells with font styles for debugging
-        const cellsWithFonts = styleCells.filter(cell => cell.font);
-        console.log(`Found ${cellsWithFonts.length} cells with font styles`);
-        if (cellsWithFonts.length > 0) {
-          console.log("Sample cell with font:", cellsWithFonts[0]);
-        }
+        // Debug output for special cells
+        console.log("Enhanced BF4 cell style:", styleCells.find(cell => cell.address === 'BF4'));
+        console.log("Enhanced BM4 cell style:", styleCells.find(cell => cell.address === 'BM4'));
+        console.log("Enhanced BM5 cell style:", styleCells.find(cell => cell.address === 'BM5'));
         
         resolve({ cellStyles: styleCells, workbook, worksheet, cellContents });
       } catch (error) {
@@ -353,6 +420,36 @@ export const modifyAndDownloadExcel = async (
         // Debug column widths
         console.log("Original column widths before modification:", originalColWidths);
         
+        // Define specific cell styles for key cells
+        const specificCellStyles = {
+          'BF4': {
+            font: { name: "Arial", sz: 9 },
+            alignment: { horizontal: "center", vertical: "middle" }
+          },
+          'BM4': {
+            font: { name: "Arial", sz: 9 },
+            alignment: { horizontal: "center", vertical: "middle" },
+            border: {
+              top: { style: "thin", color: { rgb: "000000" } },
+              right: { style: "thin", color: { rgb: "000000" } },
+              bottom: { style: "thin", color: { rgb: "000000" } },
+              left: { style: "thin", color: { rgb: "000000" } }
+            }
+          },
+          'BM5': {
+            border: {
+              top: { style: "thick", color: { rgb: "000000" } },
+              right: { style: "thick", color: { rgb: "000000" } },
+              bottom: { style: "thick", color: { rgb: "000000" } },
+              left: { style: "thick", color: { rgb: "000000" } }
+            }
+          },
+          'BJ6': {
+            font: { name: "Arial", sz: 9 },
+            alignment: { horizontal: "center", vertical: "middle" }
+          }
+        };
+        
         // Apply all cell styles from original document to preserve formatting
         cellStyles.forEach(cellStyle => {
           const cell = worksheet[cellStyle.address];
@@ -362,144 +459,128 @@ export const modifyAndDownloadExcel = async (
               cell.s = {};
             }
             
-            // Preserve font properties
-            if (cellStyle.font) {
-              cell.s.font = cellStyle.font;
-            }
-            
-            // Preserve fill properties
-            if (cellStyle.fill) {
-              cell.s.fill = cellStyle.fill;
-            }
-            
-            // Preserve border properties with more explicit settings
-            if (cellStyle.style && cellStyle.style.border) {
-              cell.s.border = {};
+            // Check if this cell has specific required styling
+            if (specificCellStyles[cellStyle.address]) {
+              const specificStyle = specificCellStyles[cellStyle.address];
               
-              // Map each border side explicitly
-              if (cellStyle.style.border.top) {
-                cell.s.border.top = {
-                  style: cellStyle.style.border.top.style,
-                  color: { rgb: "000000" }
-                };
+              // Apply specific font style with priority
+              if (specificStyle.font) {
+                cell.s.font = { ...cell.s.font, ...specificStyle.font };
+              }
+              // Fallback to analyzed style
+              else if (cellStyle.font) {
+                cell.s.font = cellStyle.font;
               }
               
-              if (cellStyle.style.border.right) {
-                cell.s.border.right = {
-                  style: cellStyle.style.border.right.style,
-                  color: { rgb: "000000" }
-                };
+              // Apply specific borders with priority
+              if (specificStyle.border) {
+                cell.s.border = specificStyle.border;
+              }
+              // Fallback to analyzed borders
+              else if (cellStyle.style && cellStyle.style.border) {
+                cell.s.border = cellStyle.style.border;
+              }
+              else if (cellStyle.borders) {
+                if (!cell.s.border) cell.s.border = {};
+                
+                if (cellStyle.borders.top) {
+                  cell.s.border.top = { style: 'thin', color: { rgb: "000000" } };
+                }
+                if (cellStyle.borders.right) {
+                  cell.s.border.right = { style: 'thin', color: { rgb: "000000" } };
+                }
+                if (cellStyle.borders.bottom) {
+                  cell.s.border.bottom = { style: 'thin', color: { rgb: "000000" } };
+                }
+                if (cellStyle.borders.left) {
+                  cell.s.border.left = { style: 'thin', color: { rgb: "000000" } };
+                }
               }
               
-              if (cellStyle.style.border.bottom) {
-                cell.s.border.bottom = {
-                  style: cellStyle.style.border.bottom.style,
-                  color: { rgb: "000000" }
-                };
+              // Apply specific alignment
+              if (specificStyle.alignment) {
+                cell.s.alignment = specificStyle.alignment;
+              }
+              else if (cellStyle.style && cellStyle.style.alignment) {
+                cell.s.alignment = cellStyle.style.alignment;
+              }
+            } 
+            // For non-specific cells, use the original analyzed styles
+            else {
+              // Preserve font properties
+              if (cellStyle.font) {
+                cell.s.font = cellStyle.font;
               }
               
-              if (cellStyle.style.border.left) {
-                cell.s.border.left = {
-                  style: cellStyle.style.border.left.style,
-                  color: { rgb: "000000" }
-                };
-              }
-            } else if (cellStyle.borders) {
-              // Alternative border format from analysis
-              cell.s.border = {};
-              
-              if (cellStyle.borders.top) {
-                cell.s.border.top = { style: 'thin', color: { rgb: "000000" } };
+              // Preserve fill properties
+              if (cellStyle.fill) {
+                cell.s.fill = cellStyle.fill;
               }
               
-              if (cellStyle.borders.right) {
-                cell.s.border.right = { style: 'thin', color: { rgb: "000000" } };
+              // Preserve border properties
+              if (cellStyle.style && cellStyle.style.border) {
+                cell.s.border = cellStyle.style.border;
+              } else if (cellStyle.borders) {
+                if (!cell.s.border) cell.s.border = {};
+                
+                if (cellStyle.borders.top) {
+                  cell.s.border.top = { style: 'thin', color: { rgb: "000000" } };
+                }
+                if (cellStyle.borders.right) {
+                  cell.s.border.right = { style: 'thin', color: { rgb: "000000" } };
+                }
+                if (cellStyle.borders.bottom) {
+                  cell.s.border.bottom = { style: 'thin', color: { rgb: "000000" } };
+                }
+                if (cellStyle.borders.left) {
+                  cell.s.border.left = { style: 'thin', color: { rgb: "000000" } };
+                }
               }
               
-              if (cellStyle.borders.bottom) {
-                cell.s.border.bottom = { style: 'thin', color: { rgb: "000000" } };
+              // Preserve alignment
+              if (cellStyle.style && cellStyle.style.alignment) {
+                cell.s.alignment = cellStyle.style.alignment;
               }
               
-              if (cellStyle.borders.left) {
-                cell.s.border.left = { style: 'thin', color: { rgb: "000000" } };
+              // Preserve number format
+              if (cellStyle.style && cellStyle.style.numFmt) {
+                cell.s.numFmt = cellStyle.style.numFmt;
               }
-            }
-            
-            // Preserve alignment
-            if (cellStyle.style && cellStyle.style.alignment) {
-              cell.s.alignment = cellStyle.style.alignment;
-            }
-            
-            // Preserve number format
-            if (cellStyle.style && cellStyle.style.numFmt) {
-              cell.s.numFmt = cellStyle.style.numFmt;
             }
           }
         });
         
-        // Special attention to cell A3
-        if (worksheet['A3']) {
-          console.log("Checking cell A3 before saving:", worksheet['A3']);
-          // Ensure the bottom border is preserved with stronger properties
-          if (!worksheet['A3'].s) {
-            worksheet['A3'].s = {};
+        // Ensure specific cells always have their styles applied even if not in cellStyles
+        Object.keys(specificCellStyles).forEach(address => {
+          // If cell doesn't exist, create it
+          if (!worksheet[address]) {
+            worksheet[address] = { t: 's', v: '', s: {} };
           }
           
-          if (!worksheet['A3'].s.border) {
-            worksheet['A3'].s.border = {};
+          // If style object doesn't exist, create it
+          if (!worksheet[address].s) {
+            worksheet[address].s = {};
           }
           
-          // Always add a bottom border to A3 with stronger properties
-          worksheet['A3'].s.border.bottom = { 
-            style: 'medium', // Changed from 'thin' to 'medium' for better visibility
-            color: { rgb: "000000" } 
-          };
+          const specificStyle = specificCellStyles[address];
           
-          console.log("A3 cell after modification:", worksheet['A3']);
-        }
+          // Apply font style
+          if (specificStyle.font) {
+            worksheet[address].s.font = { ...worksheet[address].s.font, ...specificStyle.font };
+          }
+          
+          // Apply border style
+          if (specificStyle.border) {
+            worksheet[address].s.border = specificStyle.border;
+          }
+          
+          // Apply alignment
+          if (specificStyle.alignment) {
+            worksheet[address].s.alignment = specificStyle.alignment;
+          }
+        });
         
-        // Special attention to cell BM4 - thick border
-        if (worksheet['BM4']) {
-          console.log("Checking cell BM4 before saving:", worksheet['BM4']);
-          
-          if (!worksheet['BM4'].s) {
-            worksheet['BM4'].s = {};
-          }
-          
-          if (!worksheet['BM4'].s.border) {
-            worksheet['BM4'].s.border = {};
-          }
-          
-          // Set all borders to thin
-          worksheet['BM4'].s.border = {
-            top: { style: 'thin', color: { rgb: "000000" } },
-            right: { style: 'thin', color: { rgb: "000000" } },
-            bottom: { style: 'thin', color: { rgb: "000000" } },
-            left: { style: 'thin', color: { rgb: "000000" } }
-          };
-          
-          console.log("BM4 cell after modification:", worksheet['BM4']);
-        }
-        
-        // Special attention to cell BM5 - thick border all around
-        if (worksheet['BM5']) {
-          console.log("Checking cell BM5 before saving:", worksheet['BM5']);
-          
-          if (!worksheet['BM5'].s) {
-            worksheet['BM5'].s = {};
-          }
-          
-          worksheet['BM5'].s.border = {
-            top: { style: 'thick', color: { rgb: "000000" } },
-            right: { style: 'thick', color: { rgb: "000000" } },
-            bottom: { style: 'thick', color: { rgb: "000000" } },
-            left: { style: 'thick', color: { rgb: "000000" } }
-          };
-          
-          console.log("BM5 cell after modification:", worksheet['BM5']);
-        }
-        
-        // Get all properties of cell AD18
+        // Special attention to cell AD18 - Custom text
         const cellAddress = "AD18";
         const originalCell = worksheet[cellAddress] || {};
         
@@ -515,7 +596,7 @@ export const modifyAndDownloadExcel = async (
           v: customCellText,
           w: customCellText,
           t: 's',
-          s: ad18Style?.style || cellStyle, // Use analyzed style if available, or original style
+          s: ad18Style?.style || cellStyle,
         };
         
         // Ensure column widths are preserved
@@ -549,8 +630,7 @@ export const modifyAndDownloadExcel = async (
           type: 'binary',
           cellStyles: true,
           bookSST: false,
-          compression: true,
-          Props: {}
+          compression: true
         });
         
         // Convert binary string to byte array

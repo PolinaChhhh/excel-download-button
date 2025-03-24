@@ -214,9 +214,7 @@ export const generateTemplateExcel = (
     const colIndex = XLSX.utils.decode_col(colSetting.column);
     // Use explicit pixel widths (wpx) for better precision
     worksheet['!cols'][colIndex] = { 
-      wpx: Math.round(colSetting.width * 10 * 7), // Adjusted multiplier for better precision
-      width: colSetting.width, // Store original width for reference
-      hidden: false // Mark column as visible
+      wpx: Math.round(colSetting.width * 10 * 7) // Adjusted multiplier for better precision
     };
   });
   
@@ -255,7 +253,7 @@ export const generateTemplateExcel = (
       if (cellSetting.style.font) {
         cell.s.font = {
           name: cellSetting.style.font.name || "Arial",
-          sz: cellSetting.style.font.size || 11, // Convert from points to the format XLSX expects
+          sz: cellSetting.style.font.size || 11, // Convert from points
           bold: cellSetting.style.font.bold || false,
           italic: cellSetting.style.font.italic || false,
           color: { rgb: "000000" } // Default to black
@@ -328,17 +326,13 @@ export const generateTemplateExcel = (
   };
   worksheet['!ref'] = XLSX.utils.encode_range(range);
   
-  // Add wsDimension property for better Excel compatibility
-  worksheet['!dimensions'] = worksheet['!ref'];
-  
   // Write to binary string with maximum style and format preservation
   const wbout = XLSX.write(workbook, { 
     bookType: 'xlsx',
     type: 'binary',
     cellStyles: true,
     bookSST: false,
-    compression: true,
-    Props: {}
+    compression: true
   });
   
   // Convert binary string to ArrayBuffer
