@@ -202,17 +202,18 @@ export const generateTemplateExcel = (
   // Set the sheet name
   XLSX.utils.book_append_sheet(workbook, worksheet, templateStructure.sheetName);
   
-  // Set row heights
+  // Set row heights - multiply by an appropriate factor to convert to Excel's internal units
   worksheet['!rows'] = [];
   templateStructure.rowSettings.forEach(rowSetting => {
     worksheet['!rows'][rowSetting.row - 1] = { hpt: rowSetting.height * 4 }; // Convert to points
   });
   
-  // Set column widths
+  // Set column widths - use direct character width as Excel expects
   worksheet['!cols'] = [];
   templateStructure.columnSettings.forEach(colSetting => {
     const colIndex = XLSX.utils.decode_col(colSetting.column);
-    worksheet['!cols'][colIndex] = { wch: colSetting.width * 8 }; // Convert to characters
+    // Set the width directly in characters with a multiplier to better match Excel's expectations
+    worksheet['!cols'][colIndex] = { wpx: Math.round(colSetting.width * 9 * 7) }; // More precise pixel width
   });
   
   // Set merged cells
@@ -279,11 +280,20 @@ export const generateTemplateExcel = (
     worksheet[cellAddress] = cell;
   });
   
-  // Write to binary string
+  // Define column visibility
+  const lastCol = XLSX.utils.decode_col("BS");
+  const range = {
+    s: { r: 0, c: 0 },
+    e: { r: 10, c: lastCol }
+  };
+  worksheet['!ref'] = XLSX.utils.encode_range(range);
+  
+  // Write to binary string with maximum style preservation
   const wbout = XLSX.write(workbook, { 
     bookType: 'xlsx',
     type: 'binary',
     cellStyles: true,
+    bookSST: false,
     compression: true
   });
   

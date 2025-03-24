@@ -1,3 +1,4 @@
+
 import * as XLSX from 'xlsx';
 import type { CellStyle, ValidationSummary, CellValidationResult } from '@/types/excel';
 
@@ -340,6 +341,13 @@ export const modifyAndDownloadExcel = async (
         const wsName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[wsName];
         
+        // Preserve column widths
+        if (worksheet['!cols']) {
+          console.log("Original column widths found:", worksheet['!cols']);
+        } else {
+          console.log("No column widths found in original file");
+        }
+        
         // Apply all cell styles from original document to preserve formatting
         cellStyles.forEach(cellStyle => {
           const cell = worksheet[cellStyle.address];
@@ -421,6 +429,7 @@ export const modifyAndDownloadExcel = async (
           bookType: 'xlsx', 
           type: 'binary',
           cellStyles: true,
+          bookSST: false,
           compression: true
         });
         
