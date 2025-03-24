@@ -32,10 +32,10 @@ export function extractMergedCells(worksheet: ExcelJS.Worksheet): MergedCellInfo
       mergedCells.push({
         startCell,
         endCell,
-        startRow: startCellRef.row,
-        startCol: startCellRef.col,
-        endRow: endCellRef.row,
-        endCol: endCellRef.col
+        startRow: Number(startCellRef.row),
+        startCol: Number(startCellRef.col),
+        endRow: Number(endCellRef.row),
+        endCol: Number(endCellRef.col)
       });
     });
   }

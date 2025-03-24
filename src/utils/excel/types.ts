@@ -10,16 +10,4 @@ export interface ExcelAnalysisResult {
   mergedCells: MergedCellInfo[];
 }
 
-export interface SpecialCellConfig {
-  font?: {
-    name?: string;
-    size?: number;
-  };
-  border?: {
-    top?: { style: string; color: { argb: string } };
-    left?: { style: string; color: { argb: string } };
-    bottom?: { style: string; color: { argb: string } };
-    right?: { style: string; color: { argb: string } };
-  };
-  hasBottomBorder?: boolean;
-}
+// We're no longer exporting SpecialCellConfig here since it's now in helpers.ts

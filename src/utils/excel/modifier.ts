@@ -73,8 +73,8 @@ export const modifyAndDownloadExcel = async (
           }
           
           // Apply borders to all cells in the merged range
-          for (let row = startRef.row; row <= endRef.row; row++) {
-            for (let col = startRef.col; col <= endRef.col; col++) {
+          for (let row = Number(startRef.row); row <= Number(endRef.row); row++) {
+            for (let col = Number(startRef.col); col <= Number(endRef.col); col++) {
               const cell = worksheet.getCell(row, col);
               
               // Set border styles based on position in the range
@@ -84,12 +84,12 @@ export const modifyAndDownloadExcel = async (
               };
               
               // Left border only for leftmost cells
-              if (col === startRef.col) {
+              if (col === Number(startRef.col)) {
                 cell.border.left = { style: 'thick', color: { argb: 'FF000000' } };
               }
               
               // Right border only for rightmost cells
-              if (col === endRef.col) {
+              if (col === Number(endRef.col)) {
                 cell.border.right = { style: 'thick', color: { argb: 'FF000000' } };
               }
             }
