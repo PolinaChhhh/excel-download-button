@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { toast } from 'sonner';
 import { analyzeExcelFile, modifyAndDownloadExcel, validateCellStyles } from '@/utils/excelUtils';
@@ -40,27 +39,23 @@ const ModifiedExcelDownloader: React.FC<ExcelDownloaderProps> = ({
       setHasAnalyzed(true);
       setDownloadState("idle");
       
-      // Log cells with special formatting for debugging
-      const importantCells = ["BF4", "BM4", "BM5", "BJ6"];
-      const specialFormattedCells = styles.filter(cell => 
-        importantCells.includes(cell.address) || 
-        (cell.font && cell.font.name === "Arial") ||
-        (cell.borders?.top || cell.borders?.right || cell.borders?.bottom || cell.borders?.left)
+      // Log cells with borders
+      const cellsWithBorders = styles.filter(cell => 
+        cell.borders?.top || cell.borders?.right || 
+        cell.borders?.bottom || cell.borders?.left
       );
       
-      console.log("Ячейки с особым форматированием:", specialFormattedCells.map(c => c.address));
+      console.log("Ячейки с границами:", cellsWithBorders.map((c: CellStyle) => c.address));
       
-      // Show fonts used in the document
-      const uniqueFonts = new Set();
-      styles.forEach(cell => {
-        if (cell.font && cell.font.name) {
-          uniqueFonts.add(cell.font.name);
-        }
-      });
+      // Check cell A3 specifically
+      const a3Cell = styles.find((cell: CellStyle) => cell.address === 'A3');
+      if (a3Cell) {
+        console.log("Стиль ячейки A3:", a3Cell);
+      } else {
+        console.log("Ячейка A3 не имеет специальных стилей");
+      }
       
-      console.log("Шрифты в документе:", Array.from(uniqueFonts));
-      
-      toast.success(`Анализ документа завершен. Найдено ${styles.length} ячеек со стилями и ${uniqueFonts.size} типов шрифтов.`);
+      toast.success("Анализ документа завершен. Найдено " + styles.length + " ячеек со стилями.");
       
     } catch (error) {
       console.error("Ошибка при анализе Excel файла:", error);
@@ -143,7 +138,7 @@ const ModifiedExcelDownloader: React.FC<ExcelDownloaderProps> = ({
       );
       
       setDownloadState("success");
-      toast.success(`Документ успешно скачан с сохранением всех стилей, шрифтов и границ. Ячейка AD18: "${customCellText}"`);
+      toast.success(`Документ успешно скачан с сохранением всех стилей и границ. Ячейка AD18: "${customCellText}"`);
       
       setTimeout(() => {
         setDownloadState("idle");
