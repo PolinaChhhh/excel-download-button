@@ -1,4 +1,3 @@
-
 import * as XLSX from 'xlsx';
 import type { CellStyle, ValidationSummary, CellValidationResult } from '@/types/excel';
 
@@ -85,10 +84,15 @@ export const analyzeExcelFile = async (file: File): Promise<{
                 };
               }
               
-              // Store font and fill information
+              // Store font and fill information with full details
               if (cell.s) {
                 cellStyle.font = cell.s.font;
                 cellStyle.fill = cell.s.fill;
+                
+                // Log font details for debugging
+                if (cell.s.font) {
+                  console.log(`Cell ${cellAddress} font:`, JSON.stringify(cell.s.font));
+                }
               }
               
               // Special handling for known cells with borders
@@ -117,6 +121,13 @@ export const analyzeExcelFile = async (file: File): Promise<{
         // Debug output for A3 cell
         const a3Cell = styleCells.find(cell => cell.address === 'A3');
         console.log("Enhanced A3 cell style:", a3Cell);
+        
+        // Log some cells with font styles for debugging
+        const cellsWithFonts = styleCells.filter(cell => cell.font);
+        console.log(`Found ${cellsWithFonts.length} cells with font styles`);
+        if (cellsWithFonts.length > 0) {
+          console.log("Sample cell with font:", cellsWithFonts[0]);
+        }
         
         resolve({ cellStyles: styleCells, workbook, worksheet, cellContents });
       } catch (error) {
@@ -208,11 +219,52 @@ export const validateCellStyles = async (file: File, originalStyles: CellStyle[]
               result.issues.push('Left border mismatch');
             }
             
-            // Check font
-            if (JSON.stringify(currentCell.font) !== JSON.stringify(originalCell.font)) {
-              result.isValid = false;
-              result.issues = result.issues || [];
-              result.issues.push('Font style mismatch');
+            // Check font with each property individually
+            if (originalCell.font) {
+              const currentFont = currentCell.font || {};
+              const originalFont = originalCell.font;
+              
+              // Check font size
+              if (currentFont.sz !== originalFont.sz) {
+                result.isValid = false;
+                result.issues = result.issues || [];
+                result.issues.push('Font size mismatch');
+              }
+              
+              // Check font name
+              if (currentFont.name !== originalFont.name) {
+                result.isValid = false;
+                result.issues = result.issues || [];
+                result.issues.push('Font name mismatch');
+              }
+              
+              // Check bold
+              if (currentFont.bold !== originalFont.bold) {
+                result.isValid = false;
+                result.issues = result.issues || [];
+                result.issues.push('Font bold mismatch');
+              }
+              
+              // Check italic
+              if (currentFont.italic !== originalFont.italic) {
+                result.isValid = false;
+                result.issues = result.issues || [];
+                result.issues.push('Font italic mismatch');
+              }
+              
+              // Check underline
+              if (currentFont.underline !== originalFont.underline) {
+                result.isValid = false;
+                result.issues = result.issues || [];
+                result.issues.push('Font underline mismatch');
+              }
+              
+              // Check color
+              if (JSON.stringify(currentFont.color) !== JSON.stringify(originalFont.color)) {
+                result.isValid = false;
+                result.issues = result.issues || [];
+                result.issues.push('Font color mismatch');
+              }
             }
             
             // Check fill
@@ -288,12 +340,39 @@ export const modifyAndDownloadExcel = async (
         const wsName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[wsName];
         
-        // Apply special styles
+        // Apply all cell styles from original document to preserve formatting
         cellStyles.forEach(cellStyle => {
           const cell = worksheet[cellStyle.address];
           if (cell) {
-            // Keep all styles
-            cell.s = cellStyle.style;
+            // Ensure cell style object exists
+            if (!cell.s) {
+              cell.s = {};
+            }
+            
+            // Preserve font properties
+            if (cellStyle.font) {
+              cell.s.font = cellStyle.font;
+            }
+            
+            // Preserve fill properties
+            if (cellStyle.fill) {
+              cell.s.fill = cellStyle.fill;
+            }
+            
+            // Preserve border properties
+            if (cellStyle.style.border) {
+              cell.s.border = cellStyle.style.border;
+            }
+            
+            // Preserve alignment
+            if (cellStyle.style.alignment) {
+              cell.s.alignment = cellStyle.style.alignment;
+            }
+            
+            // Preserve number format
+            if (cellStyle.style.numFmt) {
+              cell.s.numFmt = cellStyle.style.numFmt;
+            }
           }
         });
         
@@ -322,6 +401,9 @@ export const modifyAndDownloadExcel = async (
         const cellAddress = "AD18";
         const originalCell = worksheet[cellAddress] || {};
         
+        // Find the original style for AD18 in our analyzed styles
+        const ad18Style = cellStyles.find(style => style.address === cellAddress);
+        
         // Keep all original properties and metadata
         const cellStyle = originalCell.s || {};
         
@@ -331,7 +413,7 @@ export const modifyAndDownloadExcel = async (
           v: customCellText,
           w: customCellText,
           t: 's',
-          s: cellStyle,
+          s: ad18Style?.style || cellStyle, // Use analyzed style if available, or original style
         };
         
         // Write the modified workbook to buffer with full format preservation

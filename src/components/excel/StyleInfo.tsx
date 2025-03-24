@@ -10,16 +10,28 @@ interface StyleInfoProps {
 const StyleInfo: React.FC<StyleInfoProps> = ({ stylesCount, cellContents }) => {
   if (stylesCount === 0) return null;
   
+  // Calculate cells with font formatting
+  const fontFormattedCells = cellContents ? 
+    Object.entries(cellContents).filter(([_, content]) => 
+      content.font && (content.font.sz || content.font.name || content.font.bold || content.font.italic)
+    ).length : 0;
+  
   return (
     <div className="text-sm text-green-600 flex items-center gap-1 flex-col items-start">
       <div className="flex items-center gap-1">
         <FileText className="h-4 w-4" />
-        <span>✓ Проанализировано {stylesCount} ячеек со стилями. Все границы и форматирование будут сохранены.</span>
+        <span>✓ Проанализировано {stylesCount} ячеек со стилями. Все границы, размеры шрифтов и форматирование будут сохранены.</span>
       </div>
       
       <div className="text-xs text-blue-600 mt-1 ml-6">
         Ячейка A3: Нижняя граница усилена и будет гарантированно сохранена
       </div>
+      
+      {fontFormattedCells > 0 && (
+        <div className="text-xs text-blue-600 mt-1 ml-6">
+          Обнаружено {fontFormattedCells} ячеек с форматированием шрифта (размер, стиль)
+        </div>
+      )}
       
       {cellContents && Object.keys(cellContents).length > 0 && (
         <details className="mt-1 text-gray-600 ml-6">
@@ -33,6 +45,13 @@ const StyleInfo: React.FC<StyleInfoProps> = ({ stylesCount, cellContents }) => {
                 {typeof content.value === 'object' 
                   ? JSON.stringify(content.value)
                   : String(content.value !== undefined ? content.value : '')}
+                {content.font && (
+                  <span className="text-blue-500 ml-1">
+                    {content.font.sz ? ` (размер: ${content.font.sz})` : ''}
+                    {content.font.bold ? ' жирный' : ''}
+                    {content.font.italic ? ' курсив' : ''}
+                  </span>
+                )}
               </div>
             ))}
           </div>
