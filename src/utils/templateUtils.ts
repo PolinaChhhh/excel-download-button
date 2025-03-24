@@ -1,3 +1,4 @@
+
 import * as XLSX from 'xlsx';
 
 export interface RowSetting {
@@ -201,7 +202,7 @@ export const generateTemplateExcel = (
   // Set the sheet name
   XLSX.utils.book_append_sheet(workbook, worksheet, templateStructure.sheetName);
   
-  // Set row heights - multiply by an appropriate factor to convert to Excel's internal units
+  // Set row heights - precise conversion to Excel's internal units
   worksheet['!rows'] = [];
   templateStructure.rowSettings.forEach(rowSetting => {
     worksheet['!rows'][rowSetting.row - 1] = { hpt: rowSetting.height * 4 }; // Convert to points
@@ -211,8 +212,7 @@ export const generateTemplateExcel = (
   worksheet['!cols'] = [];
   templateStructure.columnSettings.forEach(colSetting => {
     const colIndex = XLSX.utils.decode_col(colSetting.column);
-    // Use explicit pixel widths (wpx) instead of character widths (wch)
-    // The multiplier is calibrated to match Excel's column width expectations
+    // Use explicit pixel widths (wpx) for better precision
     worksheet['!cols'][colIndex] = { 
       wpx: Math.round(colSetting.width * 10 * 7), // Adjusted multiplier for better precision
       width: colSetting.width, // Store original width for reference
@@ -251,34 +251,67 @@ export const generateTemplateExcel = (
     
     // Apply styles if defined
     if (cellSetting.style) {
-      // Font
+      // Font settings
       if (cellSetting.style.font) {
-        cell.s.font = cellSetting.style.font;
+        cell.s.font = {
+          name: cellSetting.style.font.name || "Arial",
+          sz: cellSetting.style.font.size || 11, // Convert from points to the format XLSX expects
+          bold: cellSetting.style.font.bold || false,
+          italic: cellSetting.style.font.italic || false,
+          color: { rgb: "000000" } // Default to black
+        };
       }
       
       // Alignment
       if (cellSetting.style.alignment) {
-        cell.s.alignment = cellSetting.style.alignment;
+        cell.s.alignment = {
+          horizontal: cellSetting.style.alignment.horizontal || "general",
+          vertical: cellSetting.style.alignment.vertical || "bottom",
+          wrapText: true // Enable text wrapping
+        };
       }
       
-      // Borders
+      // Borders - special handling to ensure proper styles
       if (cellSetting.style.border) {
         cell.s.border = {};
         
+        const mapBorderStyle = (style: string) => {
+          // Map border style to XLSX border style
+          switch(style) {
+            case "thin": return "thin";
+            case "medium": return "medium";
+            case "thick": return "thick";
+            case "double": return "double";
+            default: return "thin";
+          }
+        };
+        
         if (cellSetting.style.border.top) {
-          cell.s.border.top = cellSetting.style.border.top;
+          cell.s.border.top = {
+            style: mapBorderStyle(cellSetting.style.border.top.style),
+            color: { rgb: "000000" }
+          };
         }
         
         if (cellSetting.style.border.right) {
-          cell.s.border.right = cellSetting.style.border.right;
+          cell.s.border.right = {
+            style: mapBorderStyle(cellSetting.style.border.right.style),
+            color: { rgb: "000000" }
+          };
         }
         
         if (cellSetting.style.border.bottom) {
-          cell.s.border.bottom = cellSetting.style.border.bottom;
+          cell.s.border.bottom = {
+            style: mapBorderStyle(cellSetting.style.border.bottom.style),
+            color: { rgb: "000000" }
+          };
         }
         
         if (cellSetting.style.border.left) {
-          cell.s.border.left = cellSetting.style.border.left;
+          cell.s.border.left = {
+            style: mapBorderStyle(cellSetting.style.border.left.style),
+            color: { rgb: "000000" }
+          };
         }
       }
     }
@@ -305,10 +338,7 @@ export const generateTemplateExcel = (
     cellStyles: true,
     bookSST: false,
     compression: true,
-    // Remove the 'Application' and 'AppVersion' props as they're not in the Properties type
-    Props: {
-      // Remove invalid properties
-    }
+    Props: {}
   });
   
   // Convert binary string to ArrayBuffer

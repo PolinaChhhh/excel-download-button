@@ -372,18 +372,66 @@ export const modifyAndDownloadExcel = async (
               cell.s.fill = cellStyle.fill;
             }
             
-            // Preserve border properties
-            if (cellStyle.style.border) {
-              cell.s.border = cellStyle.style.border;
+            // Preserve border properties with more explicit settings
+            if (cellStyle.style && cellStyle.style.border) {
+              cell.s.border = {};
+              
+              // Map each border side explicitly
+              if (cellStyle.style.border.top) {
+                cell.s.border.top = {
+                  style: cellStyle.style.border.top.style,
+                  color: { rgb: "000000" }
+                };
+              }
+              
+              if (cellStyle.style.border.right) {
+                cell.s.border.right = {
+                  style: cellStyle.style.border.right.style,
+                  color: { rgb: "000000" }
+                };
+              }
+              
+              if (cellStyle.style.border.bottom) {
+                cell.s.border.bottom = {
+                  style: cellStyle.style.border.bottom.style,
+                  color: { rgb: "000000" }
+                };
+              }
+              
+              if (cellStyle.style.border.left) {
+                cell.s.border.left = {
+                  style: cellStyle.style.border.left.style,
+                  color: { rgb: "000000" }
+                };
+              }
+            } else if (cellStyle.borders) {
+              // Alternative border format from analysis
+              cell.s.border = {};
+              
+              if (cellStyle.borders.top) {
+                cell.s.border.top = { style: 'thin', color: { rgb: "000000" } };
+              }
+              
+              if (cellStyle.borders.right) {
+                cell.s.border.right = { style: 'thin', color: { rgb: "000000" } };
+              }
+              
+              if (cellStyle.borders.bottom) {
+                cell.s.border.bottom = { style: 'thin', color: { rgb: "000000" } };
+              }
+              
+              if (cellStyle.borders.left) {
+                cell.s.border.left = { style: 'thin', color: { rgb: "000000" } };
+              }
             }
             
             // Preserve alignment
-            if (cellStyle.style.alignment) {
+            if (cellStyle.style && cellStyle.style.alignment) {
               cell.s.alignment = cellStyle.style.alignment;
             }
             
             // Preserve number format
-            if (cellStyle.style.numFmt) {
+            if (cellStyle.style && cellStyle.style.numFmt) {
               cell.s.numFmt = cellStyle.style.numFmt;
             }
           }
@@ -408,6 +456,47 @@ export const modifyAndDownloadExcel = async (
           };
           
           console.log("A3 cell after modification:", worksheet['A3']);
+        }
+        
+        // Special attention to cell BM4 - thick border
+        if (worksheet['BM4']) {
+          console.log("Checking cell BM4 before saving:", worksheet['BM4']);
+          
+          if (!worksheet['BM4'].s) {
+            worksheet['BM4'].s = {};
+          }
+          
+          if (!worksheet['BM4'].s.border) {
+            worksheet['BM4'].s.border = {};
+          }
+          
+          // Set all borders to thin
+          worksheet['BM4'].s.border = {
+            top: { style: 'thin', color: { rgb: "000000" } },
+            right: { style: 'thin', color: { rgb: "000000" } },
+            bottom: { style: 'thin', color: { rgb: "000000" } },
+            left: { style: 'thin', color: { rgb: "000000" } }
+          };
+          
+          console.log("BM4 cell after modification:", worksheet['BM4']);
+        }
+        
+        // Special attention to cell BM5 - thick border all around
+        if (worksheet['BM5']) {
+          console.log("Checking cell BM5 before saving:", worksheet['BM5']);
+          
+          if (!worksheet['BM5'].s) {
+            worksheet['BM5'].s = {};
+          }
+          
+          worksheet['BM5'].s.border = {
+            top: { style: 'thick', color: { rgb: "000000" } },
+            right: { style: 'thick', color: { rgb: "000000" } },
+            bottom: { style: 'thick', color: { rgb: "000000" } },
+            left: { style: 'thick', color: { rgb: "000000" } }
+          };
+          
+          console.log("BM5 cell after modification:", worksheet['BM5']);
         }
         
         // Get all properties of cell AD18
@@ -439,8 +528,8 @@ export const modifyAndDownloadExcel = async (
                 col.wpx = Math.round(col.wch * 7); // Approximate conversion
               }
               
-              // Remove customWidth as it's not in the ColInfo type
-              col.hidden = false; // Ensure column is visible
+              // Ensure column is visible
+              col.hidden = false;
             }
           });
           
@@ -461,9 +550,7 @@ export const modifyAndDownloadExcel = async (
           cellStyles: true,
           bookSST: false,
           compression: true,
-          Props: {
-            // Remove 'Application' and 'AppVersion' as they're not in the Properties type
-          }
+          Props: {}
         });
         
         // Convert binary string to byte array
