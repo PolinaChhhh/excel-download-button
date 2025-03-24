@@ -31,11 +31,18 @@ export const analyzeExcelFile = async (file: File): Promise<{
         
         // Get merged cells information
         const mergedCells: MergedCellInfo[] = [];
-        worksheet.mergeCells.forEach(mergeRange => {
-          // Exceljs provides merged cell ranges in the format of 'A1:B2'
+        
+        // Using getMergedCells() to get an array of merge ranges
+        const merges = worksheet.mergeCells._merges || {};
+        
+        // Convert merge cells object to array 
+        Object.keys(merges).forEach(mergeKey => {
+          const mergeRange = mergeKey; // The key is the range (e.g., 'A1:B2')
+          
+          // Split range into start and end cell references
           const [startCell, endCell] = mergeRange.split(':');
           
-          // Convert cell references to row and column numbers
+          // Get cell references
           const startCellRef = worksheet.getCell(startCell);
           const endCellRef = worksheet.getCell(endCell);
           
@@ -407,44 +414,44 @@ export const modifyAndDownloadExcel = async (
         
         // 4. Apply thick borders to BM4:BS4 merged range
         const applyThickBordersToRange = (startCell: string, endCell: string) => {
-          const range = worksheet.getCell(startCell).full;
-          if (range) {
-            // Check if the range is already merged
-            const isMerged = worksheet.mergeCells.includes(`${startCell}:${endCell}`);
-            
-            if (!isMerged) {
-              // Merge the range if not already merged
-              worksheet.mergeCells(`${startCell}:${endCell}`);
-            }
-            
-            // Apply borders to all cells in the merged range
-            const startAddress = worksheet.getCell(startCell);
-            const endAddress = worksheet.getCell(endCell);
-            
-            for (let row = startAddress.row; row <= endAddress.row; row++) {
-              for (let col = startAddress.col; col <= endAddress.col; col++) {
-                const cell = worksheet.getCell(row, col);
-                
-                // Set border styles based on position in the range
-                cell.border = {
-                  top: { style: 'thick', color: { argb: 'FF000000' } },
-                  bottom: { style: 'thick', color: { argb: 'FF000000' } }
-                };
-                
-                // Left border only for leftmost cells
-                if (col === startAddress.col) {
-                  cell.border.left = { style: 'thick', color: { argb: 'FF000000' } };
-                }
-                
-                // Right border only for rightmost cells
-                if (col === endAddress.col) {
-                  cell.border.right = { style: 'thick', color: { argb: 'FF000000' } };
-                }
+          // Get start and end cell references
+          const startRef = worksheet.getCell(startCell);
+          const endRef = worksheet.getCell(endCell);
+          
+          // Check if the range is already merged
+          // In ExcelJS, mergeCells is an object with methods, not an array
+          const mergesObj = worksheet.mergeCells._merges || {};
+          const isMerged = Object.keys(mergesObj).includes(`${startCell}:${endCell}`);
+          
+          if (!isMerged) {
+            // Merge the range if not already merged
+            worksheet.mergeCells(`${startCell}:${endCell}`);
+          }
+          
+          // Apply borders to all cells in the merged range
+          for (let row = startRef.row; row <= endRef.row; row++) {
+            for (let col = startRef.col; col <= endRef.col; col++) {
+              const cell = worksheet.getCell(row, col);
+              
+              // Set border styles based on position in the range
+              cell.border = {
+                top: { style: 'thick', color: { argb: 'FF000000' } },
+                bottom: { style: 'thick', color: { argb: 'FF000000' } }
+              };
+              
+              // Left border only for leftmost cells
+              if (col === startRef.col) {
+                cell.border.left = { style: 'thick', color: { argb: 'FF000000' } };
+              }
+              
+              // Right border only for rightmost cells
+              if (col === endRef.col) {
+                cell.border.right = { style: 'thick', color: { argb: 'FF000000' } };
               }
             }
-            
-            console.log(`Applied borders to range ${startCell}:${endCell}`);
           }
+          
+          console.log(`Applied borders to range ${startCell}:${endCell}`);
         };
         
         // Apply thick borders to BM4:BS4 and BM5:BS5
