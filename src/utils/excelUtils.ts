@@ -414,220 +414,111 @@ export const modifyAndDownloadExcel = async (
         // Debug column widths
         console.log("Original column widths before modification:", originalColWidths);
         
-        // Special cells that need specific styling
-        const specialCells: Record<string, { font?: { name: string; size: number }; border?: any }> = {
-          'BF4': {
-            font: {
-              name: 'Arial',
-              size: 9
-            }
-          },
-          'BM4': {
-            border: {
-              top: { style: 'thick', color: { argb: 'FF000000' } },
-              left: { style: 'thick', color: { argb: 'FF000000' } },
-              bottom: { style: 'thick', color: { argb: 'FF000000' } },
-              right: { style: 'thick', color: { argb: 'FF000000' } }
-            }
-          },
-          'BM5': {
-            border: {
-              top: { style: 'thick', color: { argb: 'FF000000' } },
-              left: { style: 'thick', color: { argb: 'FF000000' } },
-              bottom: { style: 'thick', color: { argb: 'FF000000' } },
-              right: { style: 'thick', color: { argb: 'FF000000' } }
-            }
-          },
-          'BJ6': {
-            font: {
-              name: 'Arial',
-              size: 9
-            }
-          },
-          'A3': {
-            border: {
-              bottom: { style: 'medium', color: { argb: 'FF000000' } }
-            }
-          }
-        };
+        // COMPLETELY NEW APPROACH: Define cells with explicit styles
+        // We'll create these cells with the exact styles we need, bypassing the original document styles
         
-        // Apply all cell styles from original document to preserve formatting
+        // 1. Set the custom cell text (AD18)
+        if (!worksheet['AD18']) {
+          worksheet['AD18'] = { t: 's', v: '' };
+        }
+        worksheet['AD18'].v = customCellText;
+        worksheet['AD18'].t = 's';
+        
+        // 2. Apply Arial size 9 font to BF4
+        ensureCellExists(worksheet, 'BF4');
+        if (!worksheet['BF4'].s) worksheet['BF4'].s = {};
+        worksheet['BF4'].s.font = {
+          name: 'Arial',
+          sz: 9,
+          color: { rgb: "000000" }
+        };
+        console.log("Explicitly set BF4 font:", worksheet['BF4'].s.font);
+        
+        // 3. Apply Arial size 9 font to BJ6
+        ensureCellExists(worksheet, 'BJ6');
+        if (!worksheet['BJ6'].s) worksheet['BJ6'].s = {};
+        worksheet['BJ6'].s.font = {
+          name: 'Arial',
+          sz: 9,
+          color: { rgb: "000000" }
+        };
+        console.log("Explicitly set BJ6 font:", worksheet['BJ6'].s.font);
+        
+        // 4. Apply thick borders to BM4
+        ensureCellExists(worksheet, 'BM4');
+        if (!worksheet['BM4'].s) worksheet['BM4'].s = {};
+        worksheet['BM4'].s.border = {
+          top: { style: 'thick', color: { rgb: "000000" } },
+          left: { style: 'thick', color: { rgb: "000000" } },
+          bottom: { style: 'thick', color: { rgb: "000000" } },
+          right: { style: 'thick', color: { rgb: "000000" } }
+        };
+        console.log("Explicitly set BM4 borders:", worksheet['BM4'].s.border);
+        
+        // 5. Apply thick borders to BM5
+        ensureCellExists(worksheet, 'BM5');
+        if (!worksheet['BM5'].s) worksheet['BM5'].s = {};
+        worksheet['BM5'].s.border = {
+          top: { style: 'thick', color: { rgb: "000000" } },
+          left: { style: 'thick', color: { rgb: "000000" } },
+          bottom: { style: 'thick', color: { rgb: "000000" } },
+          right: { style: 'thick', color: { rgb: "000000" } }
+        };
+        console.log("Explicitly set BM5 borders:", worksheet['BM5'].s.border);
+        
+        // 6. Apply bottom border to A3 
+        ensureCellExists(worksheet, 'A3');
+        if (!worksheet['A3'].s) worksheet['A3'].s = {};
+        if (!worksheet['A3'].s.border) worksheet['A3'].s.border = {};
+        worksheet['A3'].s.border.bottom = { style: 'medium', color: { rgb: "000000" } };
+        
+        // Now preserve all other original formatting/styles from the cell analysis
         cellStyles.forEach(cellStyle => {
-          const cell = worksheet[cellStyle.address];
-          if (cell) {
-            // Ensure cell style object exists
-            if (!cell.s) {
-              cell.s = {};
-            }
+          const cellAddress = cellStyle.address;
+          
+          // Skip the cells we've explicitly styled above
+          if (['AD18', 'BF4', 'BJ6', 'BM4', 'BM5', 'A3'].includes(cellAddress)) {
+            return;
+          }
+          
+          ensureCellExists(worksheet, cellAddress);
+          
+          // Apply the original style if it exists
+          if (cellStyle.style) {
+            if (!worksheet[cellAddress].s) worksheet[cellAddress].s = {};
             
-            // Preserve font properties
-            if (cellStyle.font) {
-              cell.s.font = cellStyle.font;
-            }
-            
-            // Preserve fill properties
-            if (cellStyle.fill) {
-              cell.s.fill = cellStyle.fill;
-            }
-            
-            // Preserve border properties with more explicit settings
-            if (cellStyle.style && cellStyle.style.border) {
-              cell.s.border = {};
-              
-              // Map each border side explicitly
-              if (cellStyle.style.border.top) {
-                cell.s.border.top = {
-                  style: cellStyle.style.border.top.style,
-                  color: { rgb: "000000" }
-                };
-              }
-              
-              if (cellStyle.style.border.right) {
-                cell.s.border.right = {
-                  style: cellStyle.style.border.right.style,
-                  color: { rgb: "000000" }
-                };
-              }
-              
-              if (cellStyle.style.border.bottom) {
-                cell.s.border.bottom = {
-                  style: cellStyle.style.border.bottom.style,
-                  color: { rgb: "000000" }
-                };
-              }
-              
-              if (cellStyle.style.border.left) {
-                cell.s.border.left = {
-                  style: cellStyle.style.border.left.style,
-                  color: { rgb: "000000" }
-                };
-              }
-            } else if (cellStyle.borders) {
-              // Alternative border format from analysis
-              cell.s.border = {};
-              
-              if (cellStyle.borders.top) {
-                cell.s.border.top = { style: 'thin', color: { rgb: "000000" } };
-              }
-              
-              if (cellStyle.borders.right) {
-                cell.s.border.right = { style: 'thin', color: { rgb: "000000" } };
-              }
-              
-              if (cellStyle.borders.bottom) {
-                cell.s.border.bottom = { style: 'thin', color: { rgb: "000000" } };
-              }
-              
-              if (cellStyle.borders.left) {
-                cell.s.border.left = { style: 'thin', color: { rgb: "000000" } };
-              }
-            }
-            
-            // Preserve alignment
-            if (cellStyle.style && cellStyle.style.alignment) {
-              cell.s.alignment = cellStyle.style.alignment;
-            }
-            
-            // Preserve number format
-            if (cellStyle.style && cellStyle.style.numFmt) {
-              cell.s.numFmt = cellStyle.style.numFmt;
-            }
+            // Copy style properties while preserving what's already been set
+            Object.assign(worksheet[cellAddress].s, cellStyle.style);
           }
         });
-        
-        // Apply special styling to specific cells with forced font and border styling
-        Object.entries(specialCells).forEach(([cellAddress, style]) => {
-          if (!worksheet[cellAddress]) {
-            // Create the cell if it doesn't exist
-            worksheet[cellAddress] = {
-              t: 's',
-              v: '',
-              s: {}
-            };
-          }
-          
-          console.log(`Applying special style to ${cellAddress}:`, style);
-          
-          if (!worksheet[cellAddress].s) {
-            worksheet[cellAddress].s = {};
-          }
-          
-          // Apply font settings if the style has a font property
-          if (style.font) {
-            // Directly set the font property instead of merging
-            worksheet[cellAddress].s.font = {
-              name: style.font.name,
-              sz: style.font.size,
-              color: { rgb: "000000" }
-            };
-            
-            console.log(`Forced font style for ${cellAddress}:`, worksheet[cellAddress].s.font);
-          }
-          
-          // Apply border settings if the style has a border property
-          if (style.border) {
-            // Directly set the border property
-            worksheet[cellAddress].s.border = style.border;
-            
-            console.log(`Forced border style for ${cellAddress}:`, worksheet[cellAddress].s.border);
-          }
-        });
-        
-        // Get all properties of cell AD18
-        const cellAddress = "AD18";
-        const originalCell = worksheet[cellAddress] || {};
-        
-        // Find the original style for AD18 in our analyzed styles
-        const ad18Style = cellStyles.find(style => style.address === cellAddress);
-        
-        // Keep all original properties and metadata
-        const cellStyle = originalCell.s || {};
-        
-        // Create a complete cell object preserving all properties
-        worksheet[cellAddress] = {
-          ...originalCell,
-          v: customCellText,
-          w: customCellText,
-          t: 's',
-          s: ad18Style?.style || cellStyle, // Use analyzed style if available, or original style
-        };
         
         // Ensure column widths are preserved
         if (worksheet['!cols']) {
-          // Make sure all column widths use wpx (pixels) for better compatibility
-          worksheet['!cols'].forEach((col: any, index: number) => {
+          worksheet['!cols'].forEach((col: any) => {
             if (col) {
-              // If width is in characters (wch), convert to pixels (wpx)
               if (col.wch && !col.wpx) {
-                col.wpx = Math.round(col.wch * 7); // Approximate conversion
+                col.wpx = Math.round(col.wch * 7);
               }
-              
-              // Ensure column is visible
               col.hidden = false;
             }
           });
-          
-          console.log("Preserved column widths for download:", worksheet['!cols']);
-        } else {
-          console.warn("No column widths found to preserve");
         }
         
-        // Add dimension property
+        // Add dimension property if needed
         if (worksheet['!ref']) {
           worksheet['!dimensions'] = worksheet['!ref'];
         }
         
-        // Write the modified workbook to buffer with full format preservation
+        // Write the workbook with explicit style instructions
         const wbout = XLSX.write(workbook, { 
           bookType: 'xlsx', 
           type: 'binary',
           cellStyles: true,
           bookSST: false,
           compression: true,
-          Props: {}
         });
         
-        // Convert binary string to byte array
+        // Convert to blob and download
         const s2ab = (s: string) => {
           const buf = new ArrayBuffer(s.length);
           const view = new Uint8Array(buf);
@@ -637,19 +528,16 @@ export const modifyAndDownloadExcel = async (
           return buf;
         };
         
-        // Create blob from buffer
         const blob = new Blob([s2ab(wbout)], { 
           type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" 
         });
         
-        // Create download link
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = url;
         link.download = filename;
         link.click();
         
-        // Clean up resources
         URL.revokeObjectURL(url);
         
         resolve();
@@ -665,3 +553,13 @@ export const modifyAndDownloadExcel = async (
     fileReader.readAsArrayBuffer(file);
   });
 };
+
+// Helper function to ensure a cell exists in the worksheet
+function ensureCellExists(worksheet: any, cellAddress: string): void {
+  if (!worksheet[cellAddress]) {
+    worksheet[cellAddress] = {
+      t: 's',  // string type
+      v: '',   // empty value
+    };
+  }
+}

@@ -51,7 +51,7 @@ const UploadSection: React.FC<UploadSectionProps> = ({
             ✓ Данные загружены и ячейка AD18 будет заполнена значением "{customCellText}".
           </p>
           <p className="text-xs text-gray-600 mb-3">
-            При экспорте будут применены следующие стили:
+            При экспорте будут принудительно применены следующие стили:
             <br />• <span className="font-bold">Шрифт Arial, размер 9</span> для ячеек BF4, BJ6
             <br />• <span className="font-bold">Толстые границы</span> для ячеек BM4, BM5
           </p>
