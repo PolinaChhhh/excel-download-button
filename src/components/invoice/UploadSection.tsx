@@ -53,7 +53,7 @@ const UploadSection: React.FC<UploadSectionProps> = ({
           <p className="text-xs text-gray-600 mb-3">
             При экспорте будут принудительно применены следующие стили:
             <br />• <span className="font-bold">Шрифт Arial, размер 9</span> для ячеек BF4, BJ6
-            <br />• <span className="font-bold">Толстые границы</span> для ячеек BM4, BM5
+            <br />• <span className="font-bold">Толстые границы</span> для диапазонов BM4:BS4, BM5:BS5 (объединенные ячейки)
           </p>
           <ModifiedExcelDownloader 
             data={invoiceData} 

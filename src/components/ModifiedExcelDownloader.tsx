@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { toast } from 'sonner';
 import { analyzeExcelFile, modifyAndDownloadExcel, validateCellStyles } from '@/utils/excelUtils';
@@ -21,6 +22,7 @@ const ModifiedExcelDownloader: React.FC<ExcelDownloaderProps> = ({
   const [downloadState, setDownloadState] = useState<"idle" | "loading" | "analyzing" | "validating" | "success" | "error">("idle");
   const [cellStyles, setCellStyles] = useState<CellStyle[]>([]);
   const [cellContents, setCellContents] = useState<Record<string, any>>({});
+  const [mergedCells, setMergedCells] = useState<any[]>([]);
   const [hasAnalyzed, setHasAnalyzed] = useState(false);
   const [hasValidated, setHasValidated] = useState(false);
   const [validationResults, setValidationResults] = useState<ValidationSummary | null>(null);
@@ -32,10 +34,11 @@ const ModifiedExcelDownloader: React.FC<ExcelDownloaderProps> = ({
     toast.info("Анализ стилей документа...");
     
     try {
-      const { cellStyles: styles, cellContents: contents } = await analyzeExcelFile(originalFile);
+      const { cellStyles: styles, cellContents: contents, mergedCells: merges } = await analyzeExcelFile(originalFile);
       
       setCellStyles(styles);
       setCellContents(contents);
+      setMergedCells(merges);
       setHasAnalyzed(true);
       setDownloadState("idle");
       
@@ -46,6 +49,16 @@ const ModifiedExcelDownloader: React.FC<ExcelDownloaderProps> = ({
       );
       
       console.log("Ячейки с границами:", cellsWithBorders.map((c: CellStyle) => c.address));
+      
+      // Log merged cells information
+      if (merges && merges.length > 0) {
+        console.log("Найдены объединенные ячейки:", merges.length);
+        merges.forEach((merge, index) => {
+          const startCell = XLSX.utils.encode_cell({r: merge.s.r, c: merge.s.c});
+          const endCell = XLSX.utils.encode_cell({r: merge.e.r, c: merge.e.c});
+          console.log(`Объединение #${index + 1}: ${startCell}:${endCell}`);
+        });
+      }
       
       // Check cell A3 specifically
       const a3Cell = styles.find((cell: CellStyle) => cell.address === 'A3');
@@ -138,7 +151,7 @@ const ModifiedExcelDownloader: React.FC<ExcelDownloaderProps> = ({
       );
       
       setDownloadState("success");
-      toast.success(`Документ успешно скачан с сохранением всех стилей и границ. Ячейка AD18: "${customCellText}"`);
+      toast.success(`Документ успешно скачан с сохранением всех стилей, границ и объединений ячеек. Ячейка AD18: "${customCellText}"`);
       
       setTimeout(() => {
         setDownloadState("idle");

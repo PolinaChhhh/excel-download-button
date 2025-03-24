@@ -34,3 +34,12 @@ export interface ValidationSummary {
   invalidCells: number;
   cellResults: CellValidationResult[];
 }
+
+export interface MergedCellInfo {
+  startCell: string;
+  endCell: string;
+  startRow: number;
+  startCol: number;
+  endRow: number;
+  endCol: number;
+}

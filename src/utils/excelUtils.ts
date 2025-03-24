@@ -5,7 +5,8 @@ export const analyzeExcelFile = async (file: File): Promise<{
   cellStyles: CellStyle[], 
   workbook: any, 
   worksheet: any,
-  cellContents: Record<string, any>
+  cellContents: Record<string, any>,
+  mergedCells: any[]
 }> => {
   return new Promise((resolve, reject) => {
     const fileReader = new FileReader();
@@ -43,6 +44,10 @@ export const analyzeExcelFile = async (file: File): Promise<{
         } else {
           console.log("No column widths found in original file");
         }
+
+        // Get merged cells information
+        const mergedCells = worksheet['!merges'] || [];
+        console.log("Merged cells information:", mergedCells);
         
         // Analyze cell styles and contents
         const styleCells: CellStyle[] = [];
@@ -54,18 +59,18 @@ export const analyzeExcelFile = async (file: File): Promise<{
           'BF4': { font: { name: 'Arial', size: 9 } },
           'BM4': { 
             border: {
-              top: { style: 'thick', color: { argb: 'FF000000' } },
-              left: { style: 'thick', color: { argb: 'FF000000' } },
-              bottom: { style: 'thick', color: { argb: 'FF000000' } },
-              right: { style: 'thick', color: { argb: 'FF000000' } }
+              top: { style: 'thick', color: { rgb: "000000" } },
+              left: { style: 'thick', color: { rgb: "000000" } },
+              bottom: { style: 'thick', color: { rgb: "000000" } },
+              right: { style: 'thick', color: { rgb: "000000" } }
             }
           },
           'BM5': { 
             border: {
-              top: { style: 'thick', color: { argb: 'FF000000' } },
-              left: { style: 'thick', color: { argb: 'FF000000' } },
-              bottom: { style: 'thick', color: { argb: 'FF000000' } },
-              right: { style: 'thick', color: { argb: 'FF000000' } }
+              top: { style: 'thick', color: { rgb: "000000" } },
+              left: { style: 'thick', color: { rgb: "000000" } },
+              bottom: { style: 'thick', color: { rgb: "000000" } },
+              right: { style: 'thick', color: { rgb: "000000" } }
             }
           },
           'BJ6': { font: { name: 'Arial', size: 9 } },
@@ -197,7 +202,13 @@ export const analyzeExcelFile = async (file: File): Promise<{
           console.log("Sample cell with font:", cellsWithFonts[0]);
         }
         
-        resolve({ cellStyles: styleCells, workbook, worksheet, cellContents });
+        resolve({ 
+          cellStyles: styleCells, 
+          workbook, 
+          worksheet, 
+          cellContents,
+          mergedCells
+        });
       } catch (error) {
         reject(error);
       }
@@ -414,8 +425,21 @@ export const modifyAndDownloadExcel = async (
         // Debug column widths
         console.log("Original column widths before modification:", originalColWidths);
         
-        // COMPLETELY NEW APPROACH: Define cells with explicit styles
-        // We'll create these cells with the exact styles we need, bypassing the original document styles
+        // Get merged cell ranges
+        const mergedCells = worksheet['!merges'] || [];
+        console.log("Merged cells before modification:", mergedCells);
+        
+        // Find BM4:BS4 merged region
+        const bmRegion = mergedCells.find((merge: any) => {
+          const startCell = XLSX.utils.encode_cell({r: merge.s.r, c: merge.s.c});
+          return startCell === 'BM4';
+        });
+        
+        // Find BM5:BS5 merged region
+        const bm5Region = mergedCells.find((merge: any) => {
+          const startCell = XLSX.utils.encode_cell({r: merge.s.r, c: merge.s.c});
+          return startCell === 'BM5';
+        });
         
         // 1. Set the custom cell text (AD18)
         if (!worksheet['AD18']) {
@@ -444,27 +468,95 @@ export const modifyAndDownloadExcel = async (
         };
         console.log("Explicitly set BJ6 font:", worksheet['BJ6'].s.font);
         
-        // 4. Apply thick borders to BM4
-        ensureCellExists(worksheet, 'BM4');
-        if (!worksheet['BM4'].s) worksheet['BM4'].s = {};
-        worksheet['BM4'].s.border = {
-          top: { style: 'thick', color: { rgb: "000000" } },
-          left: { style: 'thick', color: { rgb: "000000" } },
-          bottom: { style: 'thick', color: { rgb: "000000" } },
-          right: { style: 'thick', color: { rgb: "000000" } }
-        };
-        console.log("Explicitly set BM4 borders:", worksheet['BM4'].s.border);
+        // 4. Apply thick borders to BM:BS merged range - Row 4
+        if (bmRegion) {
+          const startCol = bmRegion.s.c;
+          const endCol = bmRegion.e.c;
+          const row = bmRegion.s.r;
+          
+          console.log(`Setting borders for merged range BM4:BS4 from column ${startCol} to ${endCol} at row ${row}`);
+          
+          // Apply to all cells in the merged range
+          for (let col = startCol; col <= endCol; col++) {
+            const cellAddress = XLSX.utils.encode_cell({r: row, c: col});
+            ensureCellExists(worksheet, cellAddress);
+            if (!worksheet[cellAddress].s) worksheet[cellAddress].s = {};
+            
+            // Apply borders based on cell position in merged range
+            worksheet[cellAddress].s.border = {
+              top: { style: 'thick', color: { rgb: "000000" } },
+              bottom: { style: 'thick', color: { rgb: "000000" } }
+            };
+            
+            // Left border only for the leftmost cell
+            if (col === startCol) {
+              worksheet[cellAddress].s.border.left = { style: 'thick', color: { rgb: "000000" } };
+            }
+            
+            // Right border only for the rightmost cell
+            if (col === endCol) {
+              worksheet[cellAddress].s.border.right = { style: 'thick', color: { rgb: "000000" } };
+            }
+            
+            console.log(`Applied borders to ${cellAddress} in BM4:BS4 merged range`);
+          }
+        } else {
+          // Fallback if merges not detected: apply to BM4 directly
+          ensureCellExists(worksheet, 'BM4');
+          if (!worksheet['BM4'].s) worksheet['BM4'].s = {};
+          worksheet['BM4'].s.border = {
+            top: { style: 'thick', color: { rgb: "000000" } },
+            left: { style: 'thick', color: { rgb: "000000" } },
+            bottom: { style: 'thick', color: { rgb: "000000" } },
+            right: { style: 'thick', color: { rgb: "000000" } }
+          };
+          console.log("Fallback: Explicitly set BM4 borders:", worksheet['BM4'].s.border);
+        }
         
-        // 5. Apply thick borders to BM5
-        ensureCellExists(worksheet, 'BM5');
-        if (!worksheet['BM5'].s) worksheet['BM5'].s = {};
-        worksheet['BM5'].s.border = {
-          top: { style: 'thick', color: { rgb: "000000" } },
-          left: { style: 'thick', color: { rgb: "000000" } },
-          bottom: { style: 'thick', color: { rgb: "000000" } },
-          right: { style: 'thick', color: { rgb: "000000" } }
-        };
-        console.log("Explicitly set BM5 borders:", worksheet['BM5'].s.border);
+        // 5. Apply thick borders to BM:BS merged range - Row 5
+        if (bm5Region) {
+          const startCol = bm5Region.s.c;
+          const endCol = bm5Region.e.c;
+          const row = bm5Region.s.r;
+          
+          console.log(`Setting borders for merged range BM5:BS5 from column ${startCol} to ${endCol} at row ${row}`);
+          
+          // Apply to all cells in the merged range
+          for (let col = startCol; col <= endCol; col++) {
+            const cellAddress = XLSX.utils.encode_cell({r: row, c: col});
+            ensureCellExists(worksheet, cellAddress);
+            if (!worksheet[cellAddress].s) worksheet[cellAddress].s = {};
+            
+            // Apply borders based on cell position in merged range
+            worksheet[cellAddress].s.border = {
+              top: { style: 'thick', color: { rgb: "000000" } },
+              bottom: { style: 'thick', color: { rgb: "000000" } }
+            };
+            
+            // Left border only for the leftmost cell
+            if (col === startCol) {
+              worksheet[cellAddress].s.border.left = { style: 'thick', color: { rgb: "000000" } };
+            }
+            
+            // Right border only for the rightmost cell
+            if (col === endCol) {
+              worksheet[cellAddress].s.border.right = { style: 'thick', color: { rgb: "000000" } };
+            }
+            
+            console.log(`Applied borders to ${cellAddress} in BM5:BS5 merged range`);
+          }
+        } else {
+          // Fallback if merges not detected: apply to BM5 directly
+          ensureCellExists(worksheet, 'BM5');
+          if (!worksheet['BM5'].s) worksheet['BM5'].s = {};
+          worksheet['BM5'].s.border = {
+            top: { style: 'thick', color: { rgb: "000000" } },
+            left: { style: 'thick', color: { rgb: "000000" } },
+            bottom: { style: 'thick', color: { rgb: "000000" } },
+            right: { style: 'thick', color: { rgb: "000000" } }
+          };
+          console.log("Fallback: Explicitly set BM5 borders:", worksheet['BM5'].s.border);
+        }
         
         // 6. Apply bottom border to A3 
         ensureCellExists(worksheet, 'A3');
